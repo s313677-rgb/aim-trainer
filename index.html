@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>戰術模擬：實體機械 3D 靶場</title>
+    <title>戰術模擬：實體機械 3D 靶場 v2</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -206,13 +206,29 @@
         let targetTimeout;
         let timerInterval;
 
-        // 3D 投影核心參數
+        // 3D 投影參數
         const vpX = 300;
         const vpY = 300;
         const fov = 300; 
 
-        // 3D 世界坐標 (X: -250~250, Y: -250~250, Z: 200~1000)
+        // 3D 世界坐標
         let target3D = { x: 0, y: 50, z: 500, baseRadius: 40 };
+
+        // 大廳專屬動畫變數
+        let lobbyAnimationId;
+        let scanZ = 200; // 掃描網初始深度
+        let scanDirection = 1; 
+        let particles = [];
+
+        // 初始化大廳浮游粒子
+        for(let i=0; i<25; i++) {
+            particles.push({
+                x: Math.random() * 500 - 250,
+                y: Math.random() * 500 - 250,
+                z: Math.random() * 800 + 200,
+                speed: Math.random() * 2 + 1
+            });
+        }
 
         const levelSettings = {
             1: { requiredHits: 10, radius: 45, duration: 1500 },
@@ -235,6 +251,10 @@
 
         function startGame() {
             if (isPlaying) return;
+            
+            // 停止大廳動畫循環
+            cancelAnimationFrame(lobbyAnimationId);
+            
             resetGame();
             isPlaying = true;
             
@@ -264,15 +284,11 @@
             clearTimeout(targetTimeout);
 
             const settings = levelSettings[level];
-            
-            // 隨機生成 Z 軸深度 (220 到 900 之間)
             target3D.z = Math.random() * (900 - 220) + 220;
             target3D.baseRadius = settings.radius;
 
-            // 限制世界坐標防止超出牆壁
             const maxW = 210;
             target3D.x = Math.random() * (maxW * 2) - maxW;
-            // 讓靶主要分佈在中間到下半部（模擬站在地面上的打靶）
             target3D.y = Math.random() * (180 - (-50)) + (-50);
 
             drawCanvas();
@@ -287,8 +303,34 @@
             return { x: vpX + x * scale, y: vpY + y * scale, scale: scale };
         }
 
+        // 大廳專屬的動畫更新 loop
+        function updateLobby() {
+            if (isPlaying) return;
+
+            // 1. 更新大廳雷射掃描網深度
+            scanZ += scanDirection * 4;
+            if (scanZ > 950 || scanZ < 200) {
+                scanDirection *= -1;
+            }
+
+            // 2. 更新浮游全息粒子
+            particles.forEach(p => {
+                p.z -= p.speed;
+                if (p.z < 150) {
+                    p.z = 1000;
+                    p.x = Math.random() * 500 - 250;
+                    p.y = Math.random() * 500 - 250;
+                }
+            });
+
+            // 3. 繪製畫面
+            drawCanvas();
+
+            lobbyAnimationId = requestAnimationFrame(updateLobby);
+        }
+
         function drawCanvas() {
-            // 背景
+            // 背景清空
             ctx.fillStyle = "#020206";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -326,70 +368,123 @@
                 ctx.moveTo(vpX - sNear, vpY + sNear); ctx.lineTo(vpX - sFar, vpY + sFar);
                 ctx.moveTo(vpX + sNear, vpY + sNear); ctx.lineTo(vpX + sFar, vpY + sFar);
                 
-                // 地板格線延伸
                 ctx.moveTo(vpX - sNear * 0.5, vpY + sNear); ctx.lineTo(vpX - sFar * 0.5, vpY + sFar);
                 ctx.moveTo(vpX + sNear * 0.5, vpY + sNear); ctx.lineTo(vpX + sFar * 0.5, vpY + sFar);
                 ctx.stroke();
             }
 
-            // 3. 【全新核心】繪製 3D 實體靶架與投影
+            // 🌟 大廳限定：繪製 3D 浮游微粒
+            if (!isPlaying) {
+                particles.forEach(p => {
+                    const pt = project(p.x, p.y, p.z);
+                    if (pt.x > 0 && pt.x < 600 && pt.y > 0 && pt.y < 600) {
+                        const pSize = Math.max(0.5, 2.5 * pt.scale);
+                        const pAlpha = Math.max(0, (1 - p.z / 1000) * 0.6);
+                        ctx.fillStyle = `rgba(0, 255, 204, ${pAlpha})`;
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, pSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // 🌟 大廳限定：繪製 3D 來回穿梭的雷射掃描網
+                const scanPos = project(0, 0, scanZ);
+                const scanSize = size * scanPos.scale;
+                const scanAlpha = Math.max(0, (1 - scanZ / 1000) * 0.25);
+                ctx.strokeStyle = `rgba(0, 180, 255, ${scanAlpha})`;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(vpX - scanSize, vpY - scanSize, scanSize * 2, scanSize * 2);
+                
+                // 給掃描網增加十字瞄準十字架
+                ctx.beginPath();
+                ctx.moveTo(vpX - scanSize, vpY); ctx.lineTo(vpX + scanSize, vpY);
+                ctx.moveTo(vpX, vpY - scanSize); ctx.lineTo(vpX, vpY + scanSize);
+                ctx.strokeStyle = `rgba(0, 180, 255, ${scanAlpha * 0.5})`;
+                ctx.stroke();
+            }
+
+            // 3. 繪製 3D 實體靶架與投影
             const targetProj = project(target3D.x, target3D.y, target3D.z);
             const r = target3D.baseRadius * targetProj.scale;
-
-            // 計算目前深度的立體地板 Y 坐標
             const floorY = vpY + size * targetProj.scale;
 
-            // ⚙️ 繪製立體支撐桿（從地板垂直焊接上來支撐靶心）
+            // ⚙️ 支撐桿
             ctx.beginPath();
             ctx.moveTo(targetProj.x, targetProj.y);
             ctx.lineTo(targetProj.x, floorY); 
             ctx.strokeStyle = "rgba(40, 50, 70, 0.9)";
-            ctx.lineWidth = Math.max(2, 6 * targetProj.scale); // 桿子也會近粗遠細！
+            ctx.lineWidth = Math.max(2, 6 * targetProj.scale);
             ctx.stroke();
 
-            // ⚙️ 支撐桿與地板接觸點的 3D 機械底座
+            // ⚙️ 機械底座
             ctx.fillStyle = "#151922";
             ctx.fillRect(targetProj.x - r*0.3, floorY - r*0.1, r*0.6, r*0.2);
 
-            // ⚙️ 地板圓形立體投影陰影
+            // ⚙️ 地板投影陰影
             ctx.beginPath();
             const shadowOpacity = Math.max(0, (1 - target3D.z / 1000) * 0.5);
             ctx.ellipse(targetProj.x, floorY, r, r * 0.2, 0, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
             ctx.fill();
 
-            // ⚙️ 【透視壓扁】根據靶子偏離中心的程度，動態進行 3D 斜切壓扁
-            let radiusX = r;
-            let radiusY = r;
+            // ⚙️ 靶面壓扁計算
+            let radiusX = r, radiusY = r;
             const xRatio = target3D.x / size; 
             const yRatio = target3D.y / size;
-
             if (Math.abs(xRatio) > 0.35 && Math.abs(xRatio) > Math.abs(yRatio)) {
-                radiusX = r * (1 - Math.abs(xRatio) * 0.35); // 貼近左右牆面時壓扁 X 軸
+                radiusX = r * (1 - Math.abs(xRatio) * 0.35);
             } else if (yRatio < -0.35) {
-                radiusY = r * (1 - Math.abs(yRatio) * 0.35); // 貼近天花板時壓扁 Y 軸
+                radiusY = r * (1 - Math.abs(yRatio) * 0.35);
             }
 
-            // 4. 繪製多層次電子霓虹靶面
+            // 4. 繪製霓虹靶面
             ctx.shadowBlur = Math.max(5, 25 * targetProj.scale);
             ctx.shadowColor = "#00ffcc";
             ctx.beginPath();
             ctx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, 0, 0, Math.PI * 2);
             ctx.fillStyle = "#00ffcc";
             ctx.fill();
-            ctx.shadowBlur = 0; // 鎖定內圈不模糊
+            ctx.shadowBlur = 0; 
 
-            // 黑色中圈
             ctx.beginPath();
             ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2);
             ctx.fillStyle = "#111116";
             ctx.fill();
 
-            // 紅色核心點
             ctx.beginPath();
             ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.28, radiusY * 0.28, 0, 0, Math.PI * 2);
             ctx.fillStyle = "#ff3838";
             ctx.fill();
+
+            // 🌟 大廳限定：頂部戰術 HUD 邊框與「大廳待機中」文字 UI
+            if (!isPlaying) {
+                // 四角戰術框 HUD
+                ctx.strokeStyle = "rgba(0, 255, 204, 0.4)";
+                ctx.lineWidth = 2;
+                const len = 25; // 邊框長度
+                const pad = 15; // 邊界留白
+                
+                // 左上角
+                ctx.beginPath(); ctx.moveTo(pad, pad+len); ctx.lineTo(pad, pad); ctx.lineTo(pad+len, pad); ctx.stroke();
+                // 右上角
+                ctx.beginPath(); ctx.moveTo(600-pad, pad+len); ctx.lineTo(600-pad, pad); ctx.lineTo(600-pad-len, pad); ctx.stroke();
+                // 左下角
+                ctx.beginPath(); ctx.moveTo(pad, 600-pad-len); ctx.lineTo(pad, 600-pad); ctx.lineTo(pad+len, 600-pad); ctx.stroke();
+                // 右下角
+                ctx.beginPath(); ctx.moveTo(600-pad, 600-pad-len); ctx.lineTo(600-pad, 600-pad); ctx.lineTo(600-pad-len, 600-pad); ctx.stroke();
+
+                // 中央上方文字提示 (帶有呼吸燈跳動效果)
+                const pulse = Math.abs(Math.sin(performance.now() / 300));
+                ctx.fillStyle = `rgba(0, 255, 204, ${0.4 + pulse * 0.6})`;
+                ctx.font = "bold 15px 'Segoe UI', monospace";
+                ctx.textAlign = "center";
+                ctx.fillText("[ SYSTEM READY : WAITING IN LOBBY ]", 300, 45);
+                
+                // 下方操作說明
+                ctx.fillStyle = "rgba(162, 162, 194, 0.7)";
+                ctx.font = "13px 'Segoe UI'";
+                ctx.fillText("請點擊右側「開啟 3D 實體模擬」按鈕解鎖靶場", 300, 560);
+            }
         }
 
         // 開槍判定
@@ -413,14 +508,12 @@
                 ry = r * (1 - Math.abs(yRatio) * 0.35);
             }
 
-            // 橢圓碰撞偵測
             const clickDist = ((mouseX - targetProj.x) ** 2) / (rx ** 2) + ((mouseY - targetProj.y) ** 2) / (ry ** 2);
 
             if (clickDist <= 1.0) {
                 successfulHits++;
                 hitsInLevel++;
                 
-                // 3D 超視距狙擊加分
                 let distanceBonus = Math.round((target3D.z - 200) / 18);
                 score += (level * 10) + Math.max(0, distanceBonus); 
 
@@ -495,8 +588,9 @@
             document.getElementById("modal-desc").innerText = desc;
             document.getElementById("modal-overlay").style.display = "flex";
             
+            // 重新回到大廳並重啟動態特效
             target3D = { x: 0, y: 50, z: 500, baseRadius: 40 };
-            drawCanvas(); 
+            updateLobby(); 
         }
 
         function closeModal() {
@@ -511,7 +605,7 @@
         }
 
         function getLeaderboard() {
-            const board = localStorage.getItem("aim_leaderboard_v4_3d");
+            const board = localStorage.getItem("aim_leaderboard_v5_3d");
             return board ? JSON.parse(board) : [];
         }
 
@@ -527,7 +621,7 @@
             board.push({name: name, score: currentScore, date: new Date().toLocaleDateString()});
             board.sort((a, b) => b.score - a.score);
             board = board.slice(0, 5);
-            localStorage.setItem("aim_leaderboard_v4_3d", JSON.stringify(board));
+            localStorage.setItem("aim_leaderboard_v5_3d", JSON.stringify(board));
         }
 
         function showLeaderboard() {
@@ -545,7 +639,8 @@
             });
         }
 
-        drawCanvas();
+        // 啟動初始大廳動態循環
+        updateLobby();
         showLeaderboard();
     </script>
 </body>
