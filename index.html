@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TACTICAL SIMULATOR 3D</title>
+    <title>TACTICAL SIMULATOR 3D - SPLIT SCREEN</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -31,7 +31,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            max-width: 900px;
+            max-width: 1100px;
             width: 100%;
         }
 
@@ -112,7 +112,8 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            width: 250px;
+            width: 240px;
+            flex-shrink: 0;
         }
 
         .status-box {
@@ -138,12 +139,25 @@
 
         @keyframes blink { 50% { opacity: 0.4; } }
 
+        /* 雙視窗 Canvas 容器 */
+        .canvas-wrapper {
+            position: relative;
+            display: flex;
+            gap: 10px;
+            background: #05050a;
+            padding: 10px;
+            border-radius: 14px;
+            border: 1px solid #1f2230;
+        }
+
         canvas {
             background-color: #020205;
-            border: 3px solid #1f2230;
-            border-radius: 12px;
-            cursor: crosshair;
+            border: 2px solid #222533;
+            border-radius: 8px;
         }
+        
+        /* 專屬即時靶場滑鼠游標 */
+        #aimCanvas { cursor: crosshair; }
 
         #leaderboard {
             background-color: #09090f;
@@ -152,7 +166,7 @@
             flex-grow: 1;
             margin-bottom: 12px;
             border: 1px solid #1f2230;
-            max-height: 180px;
+            max-height: 160px;
             overflow-y: auto;
         }
 
@@ -206,9 +220,10 @@
 </head>
 <body>
 
-    <h1 id="ui-mainTitle">TACTICAL SIMULATOR：3D 實境靶場 🎯</h1>
+    <h1 id="ui-mainTitle">TACTICAL SIMULATOR：3D 雙視窗影之對決 🎯</h1>
     
     <div id="game-layout">
+        <!-- 頂部控制面板 -->
         <div id="control-panel">
             <div class="panel-row">
                 <div class="panel-section">
@@ -226,7 +241,7 @@
                 <div class="panel-section">
                     <div class="switch-container">
                         <input type="checkbox" id="chkGhostMode" checked>
-                        <label for="chkGhostMode" id="ui-lblGhost" style="font-size:13px; font-weight:bold; color:#ff3838; cursor:pointer;">開啟頂尖玩家影子 PK</label>
+                        <label for="chkGhostMode" id="ui-lblGhost" style="font-size:13px; font-weight:bold; color:#ff3838; cursor:pointer;">開啟頂尖玩家雙視窗 PK</label>
                     </div>
                 </div>
 
@@ -242,6 +257,7 @@
                 </div>
             </div>
 
+            <!-- 大廳常駐身分登入區 -->
             <div class="panel-row" style="border-top: 1px dashed #222533; padding-top: 8px;">
                 <div class="panel-section" id="login-form-area">
                     <span class="panel-label" id="ui-lblAuthArea">戰術認證：</span>
@@ -253,8 +269,15 @@
             </div>
         </div>
 
+        <!-- 遊戲主畫面 -->
         <div id="game-container">
-            <canvas id="aimCanvas" width="600" height="600"></canvas>
+            <!-- ⚔ 雙視窗分割區 -->
+            <div class="canvas-wrapper">
+                <!-- 左側：榜首錄影畫面 -->
+                <canvas id="ghostCanvas" width="380" height="450"></canvas>
+                <!-- 右側：玩家即時挑戰畫面 -->
+                <canvas id="aimCanvas" width="380" height="450"></canvas>
+            </div>
 
             <div id="info-panel">
                 <div>
@@ -276,6 +299,7 @@
         </div>
     </div>
 
+    <!-- 彈出式結算視窗 -->
     <div id="modal-overlay">
         <div id="modal">
             <h2 id="modal-title" style="color:#00ffcc;">訓練結束</h2>
@@ -287,6 +311,8 @@
     <script>
         const canvas = document.getElementById("aimCanvas");
         const ctx = canvas.getContext("2d");
+        const ghostCanvas = document.getElementById("ghostCanvas");
+        const gCtx = ghostCanvas.getContext("2d");
 
         // 核心狀態變數
         let score = 0, level = 1, hitsInLevel = 0;
@@ -294,33 +320,36 @@
         let gameStartTime = 0, timeLeft = 120;
         let isPlaying = false;
         let targetTimeout, timerInterval;
-        let currentUser = "Guest"; // 預設訪客身分
+        let currentUser = "Guest"; 
 
-        // 3D 投影
-        const vpX = 300, vpY = 300, fov = 300;
-        let target3D = { x: 0, y: 50, z: 500, baseRadius: 40 };
+        // 3D 投影變數 (配合新畫布 380x450 修改中心點)
+        const vpX = 190, vpY = 225, fov = 250;
+        let target3D = { x: 0, y: 30, z: 500, baseRadius: 30 };
 
-        // 大廳動畫變數
-        let lobbyAnimationId, scanZ = 200, scanDirection = 1, particles = [];
-        for(let i=0; i<25; i++) {
-            particles.push({ x: Math.random()*500-250, y: Math.random()*500-250, z: Math.random()*800+200, speed: Math.random()*2+1 });
-        }
-
-        // 👥 影子回放變數
+        // 👻 榜首錄影重播變數
         let currentRunData = []; 
         let ghostRunData = null;  
         let ghostIndex = 0;       
-        let ghostMouse = { x: 300, y: 300 }; 
-        let ghostLaserTimer = 0;   
+        let ghostMouse = { x: 190, y: 225 }; 
+        let ghostLaserTimer = 0;
+        let ghostTarget3D = { x: 0, y: 30, z: 500, baseRadius: 30 }; 
+        let ghostScore = 0, ghostLevel = 1, ghostHits = 0; 
+        let ghostActive = false; 
 
-        // 🌐 多國語言字典 (i18n)
+        // 大廳背景動畫
+        let lobbyAnimationId, scanZ = 200, scanDirection = 1, particles = [];
+        for(let i=0; i<20; i++) {
+            particles.push({ x: Math.random()*400-200, y: Math.random()*400-200, z: Math.random()*800+200, speed: Math.random()*2+1 });
+        }
+
+        // 🌐 多國語言字典
         const i18n = {
             "zh-TW": {
-                mainTitle: "TACTICAL SIMULATOR：3D 影子競速靶場 🎯", diffLabel: "模擬難度：", ghostLabel: "開啟頂尖玩家影子 PK", langLabel: "語言設置：",
+                mainTitle: "TACTICAL SIMULATOR：3D 雙視窗影之對決 🎯", diffLabel: "模擬難度：", ghostLabel: "開啟頂尖玩家雙視窗 PK", langLabel: "語言設置：",
                 optChild: "兒童模式 (極易)", optEasy: "簡單模式", optNormal: "普通規格", optHard: "高度困難", optHell: "地獄限制", optAsia: "亞洲難度 (Meme Extreme)",
                 boxUser: "目前身分", boxLevel: "目前關卡", boxScore: "當前分數", boxTarget: "擊中目標", boxAccuracy: "精準度", boxTime: "剩餘時間",
-                boardTitle: "本地神射手榜", btnStart: "開啟 3D 戰術模擬", noData: "暫無資料", ghostTag: "榜首影子",
-                lobbyReady: "[ 系統就緒 : 大廳待機中 ]", lobbyDesc: "調整上方設定，點擊按鈕解鎖靶場",
+                boardTitle: "本地神射手榜", btnStart: "開啟 3D 戰術模擬", noData: "暫無資料", ghostTag: "第一名影子",
+                lobbyReady: "[ 系統就緒 : 大廳待機中 ]", lobbyDesc: "調整設定後，解鎖靶場",
                 titleWin: "⚡ 特訓成功通關！", titleTimeout: "⏰ 限制時間截止！", titleAsiaWin: "🥢 💥 獲得亞洲神射手絕對認證！",
                 descFinalScore: "最終得分", descProgress: "通關進度", descLevel: "關", descTimeUsed: "總計耗時", descSec: "秒", descAcc: "射擊精準度",
                 descNewRecord: "\n\n🎉 恭喜打破排行紀錄！已自動為你綁定更新！", descNoRecord: "\n\n未能打破第一名的影子紀錄，請繼續加油！",
@@ -329,64 +358,25 @@
                 diffNames: { children:"兒童", easy:"簡單", normal:"普通", hard:"困難", hell:"地獄", asia:"亞洲" }
             },
             "zh-CN": {
-                mainTitle: "TACTICAL SIMULATOR：3D 影子竞速靶场 🎯", diffLabel: "模拟难度：", ghostLabel: "开启顶尖玩家影子 PK", langLabel: "语言设置：",
+                mainTitle: "TACTICAL SIMULATOR：3D 双视窗影之对决 🎯", diffLabel: "模拟难度：", ghostLabel: "开启顶尖玩家双视窗 PK", langLabel: "语言设置：",
                 optChild: "儿童模式 (极易)", optEasy: "简单模式", optNormal: "普通规格", optHard: "高度困难", optHell: "地狱限制", optAsia: "亚洲难度 (Meme Extreme)",
                 boxUser: "当前身份", boxLevel: "目前关卡", boxScore: "当前分数", boxTarget: "击中目标", boxAccuracy: "精准度", boxTime: "剩余时间",
-                boardTitle: "本地神射手榜", btnStart: "开启 3D 战术模拟", noData: "暂无数据", ghostTag: "榜首影子",
-                lobbyReady: "[ 系统就绪 : 大厅待机中 ]", lobbyDesc: "调整上方设置，点击按钮解锁靶场",
+                boardTitle: "本地神射手榜", btnStart: "开启 3D 战术模拟", noData: "暂无数据", ghostTag: "第一名影子",
+                lobbyReady: "[ 系统就绪 : 大厅待机中 ]", lobbyDesc: "调整设定后，解锁靶场",
                 titleWin: "⚡ 特训成功通关！", titleTimeout: "⏰ 限制时间截止！", titleAsiaWin: "🥢 💥 获得亚洲神射手绝对认证！",
                 descFinalScore: "最终得分", descProgress: "通关进度", descLevel: "关", descTimeUsed: "总计耗时", descSec: "秒", descAcc: "射击精准度",
                 descNewRecord: "\n\n🎉 恭喜打破排行纪录！已自动为您绑定更新！", descNoRecord: "\n\n未能打破第一名的影子纪录，请继续加油！",
                 placeholderName: "代号", placeholderPass: "密码", btnConfirm: "确认", lblAuthArea: "战术认证：", btnAuth: "登录 / 注册",
                 msgSuccessReg: " 秒速注册并登录成功！", msgSuccessLog: " 验证成功，欢迎回来！", msgWrongPass: "❌ 密码错误！此名字已被占有", msgEmpty: "❌ 请填写代号与密码",
                 diffNames: { children:"儿童", easy:"简单", normal:"普通", hard:"困难", hell:"地狱", asia:"亚洲" }
-            },
-            "en": {
-                mainTitle: "TACTICAL SIMULATOR: 3D Ghost Racing Range 🎯", diffLabel: "Difficulty:", ghostLabel: "Enable Top Player Ghost PK", langLabel: "Language:",
-                optChild: "Kids Mode (Very Easy)", optEasy: "Easy Mode", optNormal: "Normal Specification", optHard: "High Difficulty", optHell: "Hell Restriction", optAsia: "Asian Difficulty (Meme Extreme)",
-                boxUser: "Identity", boxLevel: "Current Level", boxScore: "Current Score", boxTarget: "Targets Hit", boxAccuracy: "Accuracy", boxTime: "Time Left",
-                boardTitle: "Local Leaderboard", btnStart: "Start 3D Simulation", noData: "No Record", ghostTag: "Top Ghost",
-                lobbyReady: "[ SYSTEM READY : LOBBY WAITING ]", lobbyDesc: "Adjust settings above, click button to unlock range",
-                titleWin: "⚡ Training Completed Successfully!", titleTimeout: "⏰ Time Limit Reached!", titleAsiaWin: "🥢 💥 ASIAN SHOOTER CERTIFIED!",
-                descFinalScore: "Final Score", descProgress: "Progress", descLevel: "Lvl", descTimeUsed: "Time Elapsed", descSec: "s", descAcc: "Accuracy",
-                descNewRecord: "\n\n🎉 New Record! Automatically saved under your identity!", descNoRecord: "\n\nFailed to beat the Top 1 Ghost record. Keep trying!",
-                placeholderName: "ID", placeholderPass: "Pass", btnConfirm: "Confirm", lblAuthArea: "Auth:", btnAuth: "Login/Reg",
-                msgSuccessReg: " Registered & Logged in!", msgSuccessLog: " Login Success! Welcome back.", msgWrongPass: "❌ Wrong Password! Name taken.", msgEmpty: "❌ ID and Password required",
-                diffNames: { children:"Kids", easy:"Easy", normal:"Normal", hard:"Hard", hell:"Hell", asia:"Asian" }
-            },
-            "ja": {
-                mainTitle: "TACTICAL SIMULATOR：3D ゴーストシューティング 🎯", diffLabel: "難易度設定：", ghostLabel: "トッププレイヤーのゴーストとPK", langLabel: "言語設定：",
-                optChild: "キッズモード (極易)", optEasy: "イージーモード", optNormal: "ノーマル仕様", optHard: "ハイハード", optHell: "ヘルモード", optAsia: "アジア難易度 (Meme Extreme)",
-                boxUser: "ログイン", boxLevel: "現在ステージ", boxScore: "現在のスコア", boxTarget: "命中目標", boxAccuracy: "命中率", boxTime: "残り時間",
-                boardTitle: "射撃順位表", btnStart: "3Dシミュレーション開始", noData: "データなし", ghostTag: "1位のゴースト",
-                lobbyReady: "[ SYSTEM READY : ロビー待機中 ]", lobbyDesc: "上の設定を調整し、ボタンを押して射撃場を開始",
-                titleWin: "⚡ 特訓クリア！おめでとう！", titleTimeout: "⏰ 時間切れ！", titleAsiaWin: "🥢 💥 アジアン・シューター認定獲得！",
-                descFinalScore: "最終スコア", descProgress: "クリア進度", descLevel: "面", descTimeUsed: "所要時間", descSec: "秒", descAcc: "射撃正確度",
-                descNewRecord: "\n\n🎉 新記録達成！あなたのアカウントに自動保存されました！", descNoRecord: "\n\n1位のゴースト記録を破れませんでした。次回頑張りましょう！",
-                placeholderName: "ID", placeholderPass: "パス", btnConfirm: "確認", lblAuthArea: "認証情報：", btnAuth: "ログイン/登録",
-                msgSuccessReg: " 登録とログインに成功しました！", msgSuccessLog: " 認証成功！おかえりなさい。", msgWrongPass: "❌ パスワード不一致。占有されています。", msgEmpty: "❌ IDとパスワードを入力してください",
-                diffNames: { children:"キッズ", easy:"簡単", normal:"普通", hard:"困難", hell:"地獄", asia:"アジア" }
-            },
-            "ko": {
-                mainTitle: "TACTICAL SIMULATOR: 3D 고스트 레이싱 사격장 🎯", diffLabel: "시뮬레이션 난이도:", ghostLabel: "최고 플레이어 고스트 PK 활성화", langLabel: "언어 설정:",
-                optChild: "어린이 모드 (매우 쉬움)", optEasy: "쉬움 모드", optNormal: "일반 규격", optHard: "높은 어려움", optHell: "지옥 제한", optAsia: "아시아 난이도 (Meme Extreme)",
-                boxUser: "로그인", boxLevel: "현재 스테이지", boxScore: "현재 점수", boxTarget: "적중 목표", boxAccuracy: "명중률", boxTime: "남은 시간",
-                boardTitle: "로컬 명예의 전당", btnStart: "3D 전술 시뮬레이션 시작", noData: "데이터 없음", ghostTag: "1위 고스트",
-                lobbyReady: "[ 시스템 준비 완료 : 로비 대기 중 ]", lobbyDesc: "위의 설정을 조정한 후 버튼을 클릭하여 사격장 진입",
-                titleWin: "⚡ 특훈 성공적 완료!", titleTimeout: "⏰ 제한 시간 종료!", titleAsiaWin: "🥢 💥 아시안 슈터 절대 인증 획득!",
-                descFinalScore: "최종 점수", descProgress: "진행도", descLevel: "단계", descTimeUsed: "총 소요 시간", descSec: "초", descAcc: "사격 명중률",
-                descNewRecord: "\n\n🎉 신기록 달성! 현재 계정으로 자동 저장되었습니다!", descNoRecord: "\n\n1위 고스트의 기록을 깨지 못했습니다. 다시 도전해보세요!",
-                placeholderName: "아이디", placeholderPass: "암호", btnConfirm: "확인", lblAuthArea: "전술 인증:", btnAuth: "로그인 / 등록",
-                msgSuccessReg: " 가입 및 로그인 성공!", msgSuccessLog: " 인증 성공! 환영합니다.", msgWrongPass: "❌ 암호 오류! 이미 선점된 이름입니다.", msgEmpty: "❌ 아이디와 암호를 입력하세요",
-                diffNames: { children:"어린이", easy:"쉬움", normal:"일반", hard:"어려움", hell:"지옥", asia:"아시아" }
             }
         };
 
-        function getLang() { return document.getElementById("selectLanguage").value; }
+        function getLang() { return document.getElementById("selectLanguage").value || "zh-TW"; }
 
         function switchLanguage() {
             const lang = getLang();
-            const dict = i18n[lang];
+            const dict = i18n[lang] || i18n["zh-TW"];
 
             document.getElementById("ui-mainTitle").innerText = dict.mainTitle;
             document.getElementById("ui-lblDiff").innerText = dict.diffLabel;
@@ -420,7 +410,6 @@
             showLeaderboard();
         }
 
-        // 🔐 大廳登入/註冊核心邏輯
         function lobbyLogin() {
             const dict = i18n[getLang()];
             const name = document.getElementById("authName").value.trim();
@@ -452,16 +441,16 @@
 
             currentUser = name;
             document.getElementById("lblUser").innerText = currentUser;
-            document.getElementById("authPass").value = ""; // 清空密碼欄保障安全
+            document.getElementById("authPass").value = ""; 
         }
 
         const difficultySettings = {
-            children: { name: "children", gameTime: 180, reqHits: [5, 5, 5, 5, 5],    radius: [65, 60, 55, 50, 45], duration: [3000, 2800, 2600, 2400, 2200], missPenalty: 0 },
-            easy:     { name: "easy",     gameTime: 150, reqHits: [8, 8, 10, 10, 10],  radius: [50, 46, 42, 38, 35], duration: [2000, 1800, 1600, 1400, 1200], missPenalty: 2 },
-            normal:   { name: "normal",   gameTime: 120, reqHits: [10, 10, 12, 12, 15], radius: [42, 38, 34, 30, 26], duration: [1500, 1300, 1100, 950,  800],  missPenalty: 5 },
-            hard:     { name: "hard",     gameTime: 90,  reqHits: [12, 12, 15, 15, 20], radius: [34, 30, 26, 23, 20], duration: [1100, 950,  800,  650,  550],  missPenalty: 10 },
-            hell:     { name: "hell",     gameTime: 60,  reqHits: [15, 15, 18, 20, 25], radius: [25, 22, 19, 16, 14], duration: [750,  650,  550,  480,  400],  missPenalty: 20 },
-            asia:     { name: "asia",     gameTime: 45,  reqHits: [15, 18, 20, 22, 30], radius: [18, 15, 12, 10, 8],  duration: [500,  430,  370,  310,  250],  missPenalty: 40 }
+            children: { name: "children", gameTime: 180, reqHits: [5, 5, 5, 5, 5],    radius: [55, 50, 45, 40, 35], duration: [3000, 2800, 2600, 2400, 2200], missPenalty: 0 },
+            easy:     { name: "easy",     gameTime: 150, reqHits: [8, 8, 10, 10, 10],  radius: [45, 40, 36, 32, 28], duration: [2000, 1800, 1600, 1400, 1200], missPenalty: 2 },
+            normal:   { name: "normal",   gameTime: 120, reqHits: [10, 10, 12, 12, 15], radius: [36, 32, 28, 24, 20], duration: [1500, 1300, 1100, 950,  800],  missPenalty: 5 },
+            hard:     { name: "hard",     gameTime: 90,  reqHits: [12, 12, 15, 15, 20], radius: [28, 25, 22, 19, 16], duration: [1100, 950,  800,  650,  550],  missPenalty: 10 },
+            hell:     { name: "hell",     gameTime: 60,  reqHits: [15, 15, 18, 20, 25], radius: [22, 19, 16, 13, 11], duration: [750,  650,  550,  480,  400],  missPenalty: 20 },
+            asia:     { name: "asia",     gameTime: 45,  reqHits: [15, 18, 20, 22, 30], radius: [16, 13, 10, 8, 6],   duration: [500,  430,  370,  310,  250],  missPenalty: 40 }
         };
 
         function getDiff() { return document.getElementById("selectDifficulty").value; }
@@ -479,6 +468,9 @@
             score = 0; level = 1; hitsInLevel = 0; totalClicks = 0; successfulHits = 0;
             timeLeft = cfg.gameTime;
             currentRunData = []; 
+
+            // 重設影子狀態
+            ghostScore = 0; ghostLevel = 1; ghostHits = 0;
             document.getElementById("lblTime").classList.remove("time-warning");
             updateUI();
         }
@@ -489,7 +481,7 @@
             resetGame();
             isPlaying = true;
 
-            // 鎖定大廳面板
+            // 鎖定設定
             document.getElementById("btnStart").disabled = true;
             document.getElementById("selectDifficulty").disabled = true;
             document.getElementById("selectLanguage").disabled = true;
@@ -501,6 +493,7 @@
             ghostRunData = (board.length > 0 && board[0].runData) ? board[0].runData : null;
             ghostIndex = 0;
             ghostLaserTimer = 0;
+            ghostActive = !!(ghostRunData && document.getElementById("chkGhostMode").checked);
 
             gameStartTime = performance.now();
             recordEvent('start', {});
@@ -517,21 +510,53 @@
                 }
                 document.getElementById("lblTime").innerText = timeLeft;
                 
-                if (ghostRunData && document.getElementById("chkGhostMode").checked) {
+                // 🔄 左視窗影子的數據時間軸步進解析
+                if (ghostActive) {
                     const currentMillis = performance.now() - gameStartTime;
                     while (ghostIndex < ghostRunData.length && ghostRunData[ghostIndex].time <= currentMillis) {
                         const gEvent = ghostRunData[ghostIndex];
-                        if (gEvent.type === 'click' || gEvent.type === 'hit') {
+                        if (gEvent.type === 'spawn') {
+                            ghostTarget3D.x = gEvent.x;
+                            ghostTarget3D.y = gEvent.y;
+                            ghostTarget3D.z = gEvent.z;
+                            ghostTarget3D.baseRadius = difficultySettings[getDiff()].radius[ghostLevel - 1];
+                            
+                            // 影子移動到新生靶心上
+                            const proj = project(ghostTarget3D.x, ghostTarget3D.y, ghostTarget3D.z);
+                            ghostMouse.x = proj.x;
+                            ghostMouse.y = proj.y;
+                        } 
+                        else if (gEvent.type === 'hit') {
                             ghostMouse.x = gEvent.mx;
                             ghostMouse.y = gEvent.my;
-                            ghostLaserTimer = 8; 
-                        } else if (gEvent.type === 'spawn') {
-                            ghostMouse.x = gEvent.projX;
-                            ghostMouse.y = gEvent.projY;
+                            ghostLaserTimer = 6; // 觸發紅雷射閃爍
+                            ghostHits++;
+                            
+                            let distanceBonus = Math.round((ghostTarget3D.z - 200) / 15);
+                            let basePoints = ghostLevel * 10;
+                            if (getDiff() === 'asia') basePoints *= 3;
+                            if (getDiff() === 'hell') basePoints *= 2;
+                            ghostScore += basePoints + Math.max(0, distanceBonus);
+
+                            const req = difficultySettings[getDiff()].reqHits[ghostLevel - 1];
+                            if (ghostHits >= req) {
+                                if (ghostLevel < 5) { ghostLevel++; ghostHits = 0; }
+                            }
+                        } 
+                        else if (gEvent.type === 'click') {
+                            ghostMouse.x = gEvent.mx;
+                            ghostMouse.y = gEvent.my;
+                            ghostLaserTimer = 6; 
+                            ghostScore = Math.max(0, ghostScore - difficultySettings[getDiff()].missPenalty);
                         }
                         ghostIndex++;
                     }
                 }
+
+                // 即時渲染雙視窗
+                drawCanvas();
+                drawGhostCanvas();
+
             }, 10);
 
             spawnTarget();
@@ -551,17 +576,15 @@
             clearTimeout(targetTimeout);
 
             const cfg = difficultySettings[getDiff()];
-            target3D.z = Math.random() * (900 - 220) + 220;
+            target3D.z = Math.random() * (850 - 220) + 220;
             target3D.baseRadius = cfg.radius[level - 1];
 
-            const maxW = 210;
+            const maxW = 130; // 配合寬度變窄調整生靶邊界
             target3D.x = Math.random() * (maxW * 2) - maxW;
-            target3D.y = Math.random() * (180 - (-50)) + (-50);
+            target3D.y = Math.random() * (130 - (-30)) + (-30);
 
             const proj = project(target3D.x, target3D.y, target3D.z);
             recordEvent('spawn', { x: target3D.x, y: target3D.y, z: target3D.z, projX: proj.x, projY: proj.y });
-
-            drawCanvas();
 
             targetTimeout = setTimeout(() => {
                 spawnTarget();
@@ -581,25 +604,26 @@
             particles.forEach(p => {
                 p.z -= p.speed;
                 if (p.z < 150) {
-                    p.z = 1000; p.x = Math.random()*500-250; p.y = Math.random()*500-250;
+                    p.z = 1000; p.x = Math.random()*300-150; p.y = Math.random()*300-150;
                 }
             });
             drawCanvas();
+            drawGhostCanvas();
             lobbyAnimationId = requestAnimationFrame(updateLobby);
         }
 
-        function drawCanvas() {
-            ctx.fillStyle = "#020206";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            const size = 250; 
-            const dict = i18n[getLang()];
+        // 🎨 渲染底層共通環境（繪製3D隧道）
+        function drawSceneGrid(cCtx, w, h) {
+            cCtx.fillStyle = "#020206";
+            cCtx.fillRect(0, 0, w, h);
+            const size = 160; 
 
             const farPos = project(0, 0, 1000);
             const farSize = size * farPos.scale;
-            ctx.fillStyle = "#000003";
-            ctx.fillRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
-            ctx.strokeStyle = "rgba(0, 255, 204, 0.15)";
-            ctx.strokeRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
+            cCtx.fillStyle = "#000003";
+            cCtx.fillRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
+            cCtx.strokeStyle = "rgba(0, 255, 204, 0.12)";
+            cCtx.strokeRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
 
             const zStrips = [1000, 750, 560, 420, 310, 230, 170];
             for (let i = 0; i < zStrips.length - 1; i++) {
@@ -607,91 +631,113 @@
                 const pFar = project(0, 0, zFar), pNear = project(0, 0, zNear);
                 const sFar = size * pFar.scale, sNear = size * pNear.scale;
 
-                const alpha = (1 - (zNear / 1000)) * 0.35;
-                ctx.strokeStyle = `rgba(0, 255, 204, ${alpha})`;
-                ctx.lineWidth = (1 - (zNear / 1000)) * 2;
-                ctx.strokeRect(vpX - sNear, vpY - sNear, sNear * 2, sNear * 2);
+                const alpha = (1 - (zNear / 1000)) * 0.25;
+                cCtx.strokeStyle = `rgba(0, 255, 204, ${alpha})`;
+                cCtx.lineWidth = (1 - (zNear / 1000)) * 1.5;
+                cCtx.strokeRect(vpX - sNear, vpY - sNear, sNear * 2, sNear * 2);
 
-                ctx.beginPath();
-                ctx.moveTo(vpX - sNear, vpY - sNear); ctx.lineTo(vpX - sFar, vpY - sFar);
-                ctx.moveTo(vpX + sNear, vpY - sNear); ctx.lineTo(vpX + sFar, vpY - sFar);
-                ctx.moveTo(vpX - sNear, vpY + sNear); ctx.lineTo(vpX - sFar, vpY + sFar);
-                ctx.moveTo(vpX + sNear, vpY + sNear); ctx.lineTo(vpX + sFar, vpY + sFar);
-                ctx.stroke();
+                cCtx.beginPath();
+                cCtx.moveTo(vpX - sNear, vpY - sNear); cCtx.lineTo(vpX - sFar, vpY - sFar);
+                cCtx.moveTo(vpX + sNear, vpY - sNear); cCtx.lineTo(vpX + sFar, vpY - sFar);
+                cCtx.moveTo(vpX - sNear, vpY + sNear); cCtx.lineTo(vpX - sFar, vpY + sFar);
+                cCtx.moveTo(vpX + sNear, vpY + sNear); cCtx.lineTo(vpX + sFar, vpY + sFar);
+                cCtx.stroke();
             }
+        }
+
+        // 🎯 渲染單個3D靶子
+        function drawTargetEntity(cCtx, t3d, colorMain) {
+            const targetProj = project(t3d.x, t3d.y, t3d.z);
+            const r = t3d.baseRadius * targetProj.scale;
+            const size = 160;
+            const floorY = vpY + size * targetProj.scale;
+
+            cCtx.beginPath();
+            cCtx.moveTo(targetProj.x, targetProj.y); cCtx.lineTo(targetProj.x, floorY);
+            cCtx.strokeStyle = "rgba(40, 50, 70, 0.8)";
+            cCtx.lineWidth = Math.max(1.5, 4 * targetProj.scale);
+            cCtx.stroke();
+
+            cCtx.beginPath();
+            cCtx.ellipse(targetProj.x, floorY, r, r * 0.2, 0, 0, Math.PI * 2);
+            cCtx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, (1 - t3d.z / 1000) * 0.5)})`;
+            cCtx.fill();
+
+            let radiusX = r, radiusY = r;
+            cCtx.shadowBlur = Math.max(4, 18 * targetProj.scale); cCtx.shadowColor = colorMain;
+            cCtx.beginPath(); cCtx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, 0, 0, Math.PI * 2); cCtx.fillStyle = colorMain; cCtx.fill();
+            cCtx.shadowBlur = 0;
+            cCtx.beginPath(); cCtx.ellipse(targetProj.x, targetProj.y, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2); cCtx.fillStyle = "#111116"; cCtx.fill();
+            cCtx.beginPath(); cCtx.ellipse(targetProj.x, targetProj.y, radiusX * 0.28, radiusY * 0.28, 0, 0, Math.PI * 2); cCtx.fillStyle = "#ff3838"; cCtx.fill();
+        }
+
+        // 👉 右側視窗：玩家實時畫面
+        function drawCanvas() {
+            drawSceneGrid(ctx, canvas.width, canvas.height);
+            const dict = i18n[getLang()];
 
             if (!isPlaying) {
                 particles.forEach(p => {
                     const pt = project(p.x, p.y, p.z);
-                    if (pt.x > 0 && pt.x < 600 && pt.y > 0 && pt.y < 600) {
-                        ctx.fillStyle = `rgba(0, 255, 204, ${Math.max(0, (1 - p.z / 1000) * 0.6)})`;
-                        ctx.beginPath(); ctx.arc(pt.x, pt.y, Math.max(0.5, 2.5 * pt.scale), 0, Math.PI * 2); ctx.fill();
+                    if (pt.x > 0 && pt.x < canvas.width && pt.y > 0 && pt.y < canvas.height) {
+                        ctx.fillStyle = `rgba(0, 255, 204, ${Math.max(0, (1 - p.z / 1000) * 0.5)})`;
+                        ctx.beginPath(); ctx.arc(pt.x, pt.y, Math.max(0.5, 2 * pt.scale), 0, Math.PI * 2); ctx.fill();
                     }
                 });
-                const scanPos = project(0, 0, scanZ), scanSize = size * scanPos.scale;
-                ctx.strokeStyle = `rgba(0, 180, 255, ${Math.max(0, (1 - scanZ / 1000) * 0.25)})`;
-                ctx.strokeRect(vpX - scanSize, vpY - scanSize, scanSize * 2, scanSize * 2);
-            }
-
-            const targetProj = project(target3D.x, target3D.y, target3D.z);
-            const r = target3D.baseRadius * targetProj.scale;
-            const floorY = vpY + size * targetProj.scale;
-
-            ctx.beginPath();
-            ctx.moveTo(targetProj.x, targetProj.y); ctx.lineTo(targetProj.x, floorY);
-            ctx.strokeStyle = "rgba(40, 50, 70, 0.9)";
-            ctx.lineWidth = Math.max(2, 6 * targetProj.scale);
-            ctx.stroke();
-
-            ctx.fillStyle = "#151922";
-            ctx.fillRect(targetProj.x - r*0.3, floorY - r*0.1, r*0.6, r*0.2);
-
-            ctx.beginPath();
-            ctx.ellipse(targetProj.x, floorY, r, r * 0.2, 0, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, (1 - target3D.z / 1000) * 0.5)})`;
-            ctx.fill();
-
-            let radiusX = r, radiusY = r;
-            const xRatio = target3D.x / size, yRatio = target3D.y / size;
-            if (Math.abs(xRatio) > 0.35 && Math.abs(xRatio) > Math.abs(yRatio)) radiusX = r * (1 - Math.abs(xRatio) * 0.35);
-            else if (yRatio < -0.35) radiusY = r * (1 - Math.abs(yRatio) * 0.35);
-
-            ctx.shadowBlur = Math.max(5, 25 * targetProj.scale); ctx.shadowColor = "#00ffcc";
-            ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, 0, 0, Math.PI * 2); ctx.fillStyle = "#00ffcc"; ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2); ctx.fillStyle = "#111116"; ctx.fill();
-            ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.28, radiusY * 0.28, 0, 0, Math.PI * 2); ctx.fillStyle = "#ff3838"; ctx.fill();
-
-            if (isPlaying && ghostRunData && document.getElementById("chkGhostMode").checked) {
-                if (ghostLaserTimer > 0) {
-                    ctx.beginPath(); ctx.moveTo(300, 600); ctx.lineTo(ghostMouse.x, ghostMouse.y);
-                    ctx.strokeStyle = `rgba(255, 56, 56, ${ghostLaserTimer / 8 * 0.4})`; ctx.lineWidth = 3; ctx.stroke();
-                    ghostLaserTimer--;
-                }
-                ctx.strokeStyle = "rgba(255, 56, 56, 0.6)"; ctx.lineWidth = 2; ctx.beginPath();
-                ctx.arc(ghostMouse.x, ghostMouse.y, 8, 0, Math.PI * 2);
-                ctx.moveTo(ghostMouse.x - 14, ghostMouse.y); ctx.lineTo(ghostMouse.x + 14, ghostMouse.y);
-                ctx.moveTo(ghostMouse.x, ghostMouse.y - 14); ctx.lineTo(ghostMouse.x, ghostMouse.y + 14);
-                ctx.stroke();
-                ctx.fillStyle = "rgba(255, 56, 56, 0.7)"; ctx.font = "10px monospace"; ctx.textAlign = "left";
-                ctx.fillText(dict.ghostTag, ghostMouse.x + 18, ghostMouse.y + 4);
-            }
-
-            if (!isPlaying) {
-                ctx.strokeStyle = "rgba(0, 255, 204, 0.4)"; ctx.lineWidth = 2; const len = 25, pad = 15;
-                ctx.beginPath(); ctx.moveTo(pad, pad+len); ctx.lineTo(pad, pad); ctx.lineTo(pad+len, pad); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(600-pad, pad+len); ctx.lineTo(600-pad, pad); ctx.lineTo(600-pad-len, pad); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(pad, 600-pad-len); ctx.lineTo(pad, 600-pad); ctx.lineTo(pad+len, 600-pad); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(600-pad, 600-pad-len); ctx.lineTo(600-pad, 600-pad); ctx.lineTo(600-pad-len, 600-pad); ctx.stroke();
-
-                const pulse = Math.abs(Math.sin(performance.now() / 300));
-                ctx.fillStyle = `rgba(0, 255, 204, ${0.4 + pulse * 0.6})`; ctx.font = "bold 15px 'Segoe UI', monospace"; ctx.textAlign = "center";
-                ctx.fillText(dict.lobbyReady, 300, 45);
-                ctx.fillStyle = "rgba(162, 162, 194, 0.7)"; ctx.font = "13px 'Segoe UI'";
-                ctx.fillText(dict.lobbyDesc, 300, 560);
+                ctx.fillStyle = "rgba(0, 255, 204, 0.8)"; ctx.font = "bold 13px monospace"; ctx.textAlign = "center";
+                ctx.fillText("[ 你的實時靶場 ]", vpX, 40);
+                ctx.fillStyle = "rgba(162, 162, 194, 0.6)"; ctx.font = "12px 'Segoe UI'";
+                ctx.fillText(dict.lobbyDesc, vpX, 420);
+            } else {
+                drawTargetEntity(ctx, target3D, "#00ffcc");
+                
+                // 水印與即時局內提示
+                ctx.fillStyle = "rgba(0, 255, 204, 0.2)"; ctx.font = "bold 12px monospace"; ctx.textAlign = "right";
+                ctx.fillText(`YOU Lvl.${level}`, canvas.width - 15, 25);
             }
         }
 
+        // 👈 左側視窗：榜首影子重播畫面
+        function drawGhostCanvas() {
+            drawSceneGrid(gCtx, ghostCanvas.width, ghostCanvas.height);
+            const dict = i18n[getLang()];
+
+            if (!isPlaying) {
+                gCtx.fillStyle = "rgba(255, 56, 56, 0.6)"; gCtx.font = "bold 13px monospace"; gCtx.textAlign = "center";
+                gCtx.fillText("[ 榜首紀錄對決視窗 ]", vpX, 40);
+                gCtx.fillStyle = "rgba(162, 162, 194, 0.5)"; gCtx.font = "11px sans-serif";
+                gCtx.fillText(ghostRunData ? "最高紀錄影子載入完畢" : "目前暫無紀錄錄影", vpX, 420);
+            } else {
+                if (ghostActive) {
+                    drawTargetEntity(gCtx, ghostTarget3D, "#ff9900");
+
+                    // 繪製榜首開火軌跡
+                    if (ghostLaserTimer > 0) {
+                        gCtx.beginPath(); gCtx.moveTo(vpX, ghostCanvas.height); gCtx.lineTo(ghostMouse.x, ghostMouse.y);
+                        gCtx.strokeStyle = `rgba(255, 56, 56, ${ghostLaserTimer / 6 * 0.5})`; gCtx.lineWidth = 2; gCtx.stroke();
+                        ghostLaserTimer--;
+                    }
+                    // 繪製準心
+                    gCtx.strokeStyle = "rgba(255, 56, 56, 0.7)"; gCtx.lineWidth = 1.5; gCtx.beginPath();
+                    gCtx.arc(ghostMouse.x, ghostMouse.y, 6, 0, Math.PI * 2);
+                    gCtx.moveTo(ghostMouse.x - 12, ghostMouse.y); gCtx.lineTo(ghostMouse.x + 12, ghostMouse.y);
+                    gCtx.moveTo(ghostMouse.x, ghostMouse.y - 12); gCtx.lineTo(ghostMouse.x, ghostMouse.y + 12);
+                    gCtx.stroke();
+
+                    gCtx.fillStyle = "rgba(255, 56, 56, 0.8)"; gCtx.font = "10px monospace"; gCtx.textAlign = "left";
+                    gCtx.fillText(dict.ghostTag, ghostMouse.x + 15, ghostMouse.y + 3);
+
+                    // 影子資料看板
+                    gCtx.fillStyle = "rgba(255, 56, 56, 0.3)"; gCtx.font = "bold 12px monospace"; gCtx.textAlign = "left";
+                    gCtx.fillText(`GHOST Lvl.${ghostLevel}  Pts:${ghostScore}`, 15, 25);
+                } else {
+                    gCtx.fillStyle = "rgba(100, 100, 120, 0.5)"; gCtx.font = "12px monospace"; gCtx.textAlign = "center";
+                    gCtx.fillText("NO GHOST GORD RECORD", vpX, vpY);
+                }
+            }
+        }
+
+        // 玩家開火點擊判定
         canvas.addEventListener("mousedown", (e) => {
             if (!isPlaying) return;
             totalClicks++;
@@ -703,10 +749,6 @@
             const r = target3D.baseRadius * targetProj.scale;
 
             let rx = r, ry = r;
-            const xRatio = target3D.x / 250, yRatio = target3D.y / 250;
-            if (Math.abs(xRatio) > 0.35 && Math.abs(xRatio) > Math.abs(yRatio)) rx = r * (1 - Math.abs(xRatio) * 0.35);
-            else if (yRatio < -0.35) ry = r * (1 - Math.abs(yRatio) * 0.35);
-
             const clickDist = ((mouseX - targetProj.x) ** 2) / (rx ** 2) + ((mouseY - targetProj.y) ** 2) / (ry ** 2);
             const cfg = difficultySettings[getDiff()];
 
@@ -745,7 +787,7 @@
         }
 
         function drawFlashBorder() {
-            ctx.strokeStyle = "rgba(255, 56, 56, 0.5)"; ctx.lineWidth = 10; ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "rgba(255, 56, 56, 0.5)"; ctx.lineWidth = 8; ctx.strokeRect(0, 0, canvas.width, canvas.height);
         }
 
         function updateUI() {
@@ -764,7 +806,7 @@
             clearTimeout(targetTimeout); clearInterval(timerInterval);
             recordEvent('end', {});
 
-            // 解鎖大廳面板
+            // 解鎖
             document.getElementById("btnStart").disabled = false;
             document.getElementById("selectDifficulty").disabled = false;
             document.getElementById("selectLanguage").disabled = false;
@@ -783,7 +825,6 @@
             
             let desc = `${dict.descFinalScore}：${score}\n${dict.descProgress}：${level} ${dict.descLevel}\n${dict.descTimeUsed}：${timeUsed} ${dict.descSec}\n${dict.descAcc}：${accuracy}%`;
             
-            // 🎯 超流暢自動判定：如果打破歷史紀錄，直接用當前登入的名字（若是Guest則用Guest）存入，不開視窗卡人
             if (checkHighScore(score)) {
                 desc += dict.descNewRecord;
                 saveHighScore(currentUser, score, currentRunData);
@@ -795,7 +836,7 @@
             document.getElementById("modal-desc").innerText = desc;
             document.getElementById("modal-overlay").style.display = "flex";
             
-            target3D = { x: 0, y: 50, z: 500, baseRadius: 40 };
+            target3D = { x: 0, y: 30, z: 500, baseRadius: 30 };
             updateLobby(); 
         }
 
@@ -839,15 +880,14 @@
         function showLeaderboard() {
             const board = getLeaderboard();
             const listEl = document.getElementById("leaderList");
-            const dict = i18n[getLang()];
             listEl.innerHTML = "";
             if (board.length === 0) {
-                listEl.innerHTML = `<li>${dict.noData}</li>`;
+                listEl.innerHTML = `<li>暫無資料</li>`;
                 return;
             }
             board.forEach((item, index) => {
                 const li = document.createElement("li");
-                const hasGhost = (index === 0 && item.runData) ? " 👻" : "";
+                const hasGhost = (index === 0 && item.runData) ? " 🎥" : "";
                 li.innerHTML = `<strong>${item.name}</strong> - ${item.score} (${item.date})${hasGhost}`;
                 listEl.appendChild(li);
             });
