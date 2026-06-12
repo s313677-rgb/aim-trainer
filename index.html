@@ -1,3 +1,4 @@
+HTML
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -237,8 +238,9 @@
             timerInterval = setInterval(() => {
                 timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
                 document.getElementById("lblTime").innerText = timeElapsed;
-            },
-spawnTarget();
+            }, 10);
+
+            spawnTarget();
         }
 
         // 生成靶
