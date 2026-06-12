@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>戰術模擬：動態難度與影子 PK 3D 靶場</title>
+    <title>TACTICAL SIMULATOR 3D</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -24,18 +24,18 @@
             text-shadow: 0 0 15px rgba(0, 255, 204, 0.8);
             letter-spacing: 3px;
             font-weight: 800;
-            font-size: 28px;
+            font-size: 26px;
         }
 
         #game-layout {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             max-width: 900px;
             width: 100%;
         }
 
-        /* 頂部難度控制面板 */
+        /* 頂部控制面板 */
         #control-panel {
             background-color: #13131c;
             padding: 12px 20px;
@@ -45,6 +45,7 @@
             justify-content: space-between;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .panel-section {
@@ -54,7 +55,7 @@
         }
 
         .panel-label {
-            font-size: 14px;
+            font-size: 13px;
             color: #8a8a9e;
             font-weight: bold;
         }
@@ -65,7 +66,7 @@
             border: 1px solid #00ffcc;
             padding: 6px 12px;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             outline: none;
             cursor: pointer;
@@ -86,7 +87,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            width: 240px;
+            width: 250px;
         }
 
         .status-box {
@@ -94,7 +95,7 @@
             padding: 10px 14px;
             border-radius: 8px;
             margin-bottom: 8px;
-            font-size: 15px;
+            font-size: 14px;
             border-left: 4px solid #00ffcc;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
         }
@@ -135,13 +136,12 @@
             color: #00ffcc;
             border-bottom: 2px solid rgba(0, 255, 204, 0.2);
             padding-bottom: 5px;
-            font-size: 15px;
+            font-size: 14px;
         }
 
         ol { padding-left: 20px; margin: 5px 0 0 0; }
-        li { margin-bottom: 6px; font-size: 13px; color: #a2a2c2; }
+        li { margin-bottom: 6px; font-size: 12px; color: #a2a2c2; }
 
-        /* 開關切換鈕 */
         .switch-container {
             display: flex;
             align-items: center;
@@ -151,20 +151,20 @@
             border-radius: 6px;
             border: 1px solid #222533;
         }
-        .switch-container input { cursor: pointer; width: 16px; height: 16px; }
+        .switch-container input { cursor: pointer; width: 15px; height: 15px; }
 
         .btn {
             background: linear-gradient(135deg, #00ffcc 0%, #00b3ff 100%);
             color: #05050a;
             border: none;
             padding: 14px 20px;
-            font-size: 16px;
+            font-size: 15px;
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s ease;
             width: 100%;
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
         }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 255, 204, 0.5); }
         .btn:disabled { background: #333 !important; color: #666 !important; transform: none !important; box-shadow: none !important; }
@@ -173,33 +173,44 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(4, 4, 8, 0.9); justify-content: center; align-items: center; z-index: 10;
         }
-        #modal { background: #13131c; padding: 35px; border-radius: 16px; text-align: center; border: 2px solid #00ffcc; }
-        #modal input { padding: 12px; width: 80%; margin: 18px 0; border: 1px solid #222533; background: #09090f; color: #fff; border-radius: 6px; text-align: center; }
+        #modal { background: #13131c; padding: 35px; border-radius: 16px; text-align: center; border: 2px solid #00ffcc; max-width: 400px; width: 90%; }
+        #modal input { padding: 12px; width: 80%; margin: 18px 0; border: 1px solid #222533; background: #09090f; color: #fff; border-radius: 6px; text-align: center; font-size: 15px; }
     </style>
 </head>
 <body>
 
-    <h1>TACTICAL SIMULATOR：3D 影子競速靶場 🎯</h1>
+    <h1 id="ui-mainTitle">TACTICAL SIMULATOR：3D 實境靶場 🎯</h1>
     
     <div id="game-layout">
         <div id="control-panel">
             <div class="panel-section">
-                <div class="panel-label">模擬難度：</div>
+                <div class="panel-label" id="ui-lblDiff">模擬難度：</div>
                 <select id="selectDifficulty" onchange="changeDifficulty()">
-                    <option value="children">兒童模式 (極易)</option>
-                    <option value="easy">簡單模式</option>
-                    <option value="normal" selected>普通規格</option>
-                    <option value="hard">高度困難</option>
-                    <option value="hell">地獄限制</option>
-                    <option value="asia">亞洲難度 (Meme Extreme)</option>
+                    <option value="children" id="opt-child">兒童模式 (極易)</option>
+                    <option value="easy" id="opt-easy">簡單模式</option>
+                    <option value="normal" id="opt-normal" selected>普通規格</option>
+                    <option value="hard" id="opt-hard">高度困難</option>
+                    <option value="hell" id="opt-hell">地獄限制</option>
+                    <option value="asia" id="opt-asia">亞洲難度 (Meme Extreme)</option>
                 </select>
             </div>
 
             <div class="panel-section">
                 <div class="switch-container">
                     <input type="checkbox" id="chkGhostMode" checked>
-                    <label for="chkGhostMode" style="font-size:13px; font-weight:bold; color:#ff3838; cursor:pointer;">開啟頂尖玩家影子 PK</label>
+                    <label for="chkGhostMode" id="ui-lblGhost" style="font-size:13px; font-weight:bold; color:#ff3838; cursor:pointer;">開啟頂尖玩家影子 PK</label>
                 </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-label" id="ui-lblLang">語言設置：</div>
+                <select id="selectLanguage" onchange="switchLanguage()">
+                    <option value="zh-TW" selected>繁體中文</option>
+                    <option value="zh-CN">简体中文</option>
+                    <option value="en">English</option>
+                    <option value="ja">日本語</option>
+                    <option value="ko">한국어</option>
+                </select>
             </div>
         </div>
 
@@ -208,15 +219,15 @@
 
             <div id="info-panel">
                 <div>
-                    <div class="status-box">目前關卡: <span id="lblLevel">1</span> / 5</div>
-                    <div class="status-box">當前分數: <span id="lblScore">0</span></div>
-                    <div class="status-box">擊中目標: <span id="lblTarget">0 / 10</span></div>
-                    <div class="status-box">精準度: <span id="lblAccuracy">100</span>%</div>
-                    <div class="status-box">剩餘時間: <span id="lblTime">120.00</span> 秒</div>
+                    <div class="status-box"><span id="ui-boxLevel">目前關卡</span>: <span id="lblLevel">1</span> / 5</div>
+                    <div class="status-box"><span id="ui-boxScore">當前分數</span>: <span id="lblScore">0</span></div>
+                    <div class="status-box"><span id="ui-boxTarget">擊中目標</span>: <span id="lblTarget">0 / 10</span></div>
+                    <div class="status-box"><span id="ui-boxAccuracy">精準度</span>: <span id="lblAccuracy">100</span>%</div>
+                    <div class="status-box"><span id="ui-boxTime">剩餘時間</span>: <span id="lblTime">120.00</span></div>
                 </div>
 
                 <div id="leaderboard">
-                    <h3>🏆 本地神射手榜 (<span id="lblBoardDiff">普通</span>)</h3>
+                    <h3>🏆 <span id="ui-boardTitle">本地神射手榜</span> (<span id="lblBoardDiff">普通</span>)</h3>
                     <ol id="leaderList"><li>暫無資料</li></ol>
                 </div>
                 
@@ -228,7 +239,7 @@
     <div id="modal-overlay">
         <div id="modal">
             <h2 id="modal-title" style="color:#00ffcc;">訓練結束</h2>
-            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da;"></p>
+            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da; text-align: left;"></p>
             <div id="name-input-area" style="display:none;">
                 <input type="text" id="playerName" placeholder="請輸入你的代號" maxlength="8">
             </div>
@@ -240,14 +251,14 @@
         const canvas = document.getElementById("aimCanvas");
         const ctx = canvas.getContext("2d");
 
-        // 核心計分與狀態變數
+        // 核心狀態變數
         let score = 0, level = 1, hitsInLevel = 0;
         let totalClicks = 0, successfulHits = 0;
         let gameStartTime = 0, timeLeft = 120;
         let isPlaying = false;
         let targetTimeout, timerInterval;
 
-        // 3D 投影設定
+        // 3D 投影
         const vpX = 300, vpY = 300, fov = 300;
         let target3D = { x: 0, y: 50, z: 500, baseRadius: 40 };
 
@@ -257,21 +268,114 @@
             particles.push({ x: Math.random()*500-250, y: Math.random()*500-250, z: Math.random()*800+200, speed: Math.random()*2+1 });
         }
 
-        // 👥 影子 PK 錄製與播放核心變數
-        let currentRunData = []; // 錄製當前玩家：[{time: 毫秒, type: 'spawn'/'click'/'hit', x, y, z, rx, ry, mx, my}]
-        let ghostRunData = null;  // 目前榜首的影子紀錄數據
-        let ghostIndex = 0;       // 影子數據播放指標
-        let ghostMouse = { x: 300, y: 300 }; // 畫面上顯示的影子虛擬滑鼠位置
-        let ghostLaserTimer = 0;   // 影子開槍開火雷射光芒計時器
+        // 👥 影子回放變數
+        let currentRunData = []; 
+        let ghostRunData = null;  
+        let ghostIndex = 0;       
+        let ghostMouse = { x: 300, y: 300 }; 
+        let ghostLaserTimer = 0;   
 
-        // 🎛 六大難度配置參數矩陣 (控制：總時間 / 每關需求數 / 靶基底半徑 / 反應時間速度遞進)
+        // 🌐 多國語言字典 (i18n)
+        const i18n = {
+            "zh-TW": {
+                mainTitle: "TACTICAL SIMULATOR：3D 影子競速靶場 🎯", diffLabel: "模擬難度：", ghostLabel: "開啟頂尖玩家影子 PK", langLabel: "語言設置：",
+                optChild: "兒童模式 (極易)", optEasy: "簡單模式", optNormal: "普通規格", optHard: "高度困難", optHell: "地獄限制", optAsia: "亞洲難度 (Meme Extreme)",
+                boxLevel: "目前關卡", boxScore: "當前分數", boxTarget: "擊中目標", boxAccuracy: "精準度", boxTime: "剩餘時間",
+                boardTitle: "本地神射手榜", btnStart: "開啟 3D 戰術模擬", noData: "暫無資料", ghostTag: "榜首影子",
+                lobbyReady: "[ 系統就緒 : 大廳待機中 ]", lobbyDesc: "調整上方設定，點擊按鈕解鎖靶場",
+                titleWin: "⚡ 特訓成功通關！", titleTimeout: "⏰ 限制時間截止！", titleAsiaWin: "🥢 💥 獲得亞洲神射手絕對認證！",
+                descFinalScore: "最終得分", descProgress: "通關進度", descLevel: "關", descTimeUsed: "總計耗時", descSec: "秒", descAcc: "射擊精準度",
+                descNewRecord: "\n\n恭喜打破歷史紀錄！你的軌跡將被錄製為影子！請輸入代號：", descNoRecord: "\n\n未能打破第一名的影子紀錄，請繼續加油！",
+                placeholderName: "請輸入你的代號", btnConfirm: "確認", diffNames: { children:"兒童", easy:"簡單", normal:"普通", hard:"困難", hell:"地獄", asia:"亞洲" }
+            },
+            "zh-CN": {
+                mainTitle: "TACTICAL SIMULATOR：3D 影子竞速靶场 🎯", diffLabel: "模拟难度：", ghostLabel: "开启顶尖玩家影子 PK", langLabel: "语言设置：",
+                optChild: "儿童模式 (极易)", optEasy: "简单模式", optNormal: "普通规格", optHard: "高度困难", optHell: "地狱限制", optAsia: "亚洲难度 (Meme Extreme)",
+                boxLevel: "目前关卡", boxScore: "当前分数", boxTarget: "击中目标", boxAccuracy: "精准度", boxTime: "剩余时间",
+                boardTitle: "本地神射手榜", btnStart: "开启 3D 战术模拟", noData: "暂无数据", ghostTag: "榜首影子",
+                lobbyReady: "[ 系统就绪 : 大厅待机中 ]", lobbyDesc: "调整上方设置，点击按钮解锁靶场",
+                titleWin: "⚡ 特训成功通关！", titleTimeout: "⏰ 限制时间截止！", titleAsiaWin: "🥢 💥 获得亚洲神射手绝对认证！",
+                descFinalScore: "最终得分", descProgress: "通关进度", descLevel: "关", descTimeUsed: "总计耗时", descSec: "秒", descAcc: "射击精准度",
+                descNewRecord: "\n\n恭喜打破历史纪录！你的轨迹将被录制为影子！请输入代号：", descNoRecord: "\n\n未能打破第一名的影子纪录，请继续加油！",
+                placeholderName: "请输入您的代号", btnConfirm: "确认", diffNames: { children:"儿童", easy:"简单", normal:"普通", hard:"困难", hell:"地狱", asia:"亚洲" }
+            },
+            "en": {
+                mainTitle: "TACTICAL SIMULATOR: 3D Ghost Racing Range 🎯", diffLabel: "Difficulty:", ghostLabel: "Enable Top Player Ghost PK", langLabel: "Language:",
+                optChild: "Kids Mode (Very Easy)", optEasy: "Easy Mode", optNormal: "Normal Specification", optHard: "High Difficulty", optHell: "Hell Restriction", optAsia: "Asian Difficulty (Meme Extreme)",
+                boxLevel: "Current Level", boxScore: "Current Score", boxTarget: "Targets Hit", boxAccuracy: "Accuracy", boxTime: "Time Left",
+                boardTitle: "Local Leaderboard", btnStart: "Start 3D Simulation", noData: "No Record", ghostTag: "Top Ghost",
+                lobbyReady: "[ SYSTEM READY : LOBBY WAITING ]", lobbyDesc: "Adjust settings above, click button to unlock range",
+                titleWin: "⚡ Training Completed Successfully!", titleTimeout: "⏰ Time Limit Reached!", titleAsiaWin: "🥢 💥 ASIAN SHOOTER CERTIFIED!",
+                descFinalScore: "Final Score", descProgress: "Progress", descLevel: "Lvl", descTimeUsed: "Time Elapsed", descSec: "s", descAcc: "Accuracy",
+                descNewRecord: "\n\nCongrats! New Record! Your trail will be saved as a Ghost. Enter your callsign:", descNoRecord: "\n\nFailed to beat the Top 1 Ghost record. Keep trying!",
+                placeholderName: "Enter your name", btnConfirm: "Confirm", diffNames: { children:"Kids", easy:"Easy", normal:"Normal", hard:"Hard", hell:"Hell", asia:"Asian" }
+            },
+            "ja": {
+                mainTitle: "TACTICAL SIMULATOR：3D ゴーストシューティング 🎯", diffLabel: "難易度設定：", ghostLabel: "トッププレイヤーのゴーストとPK", langLabel: "言語設定：",
+                optChild: "キッズモード (極易)", optEasy: "イージーモード", optNormal: "ノーマル仕様", optHard: "ハイハード", optHell: "ヘルモード", optAsia: "アジア難易度 (Meme Extreme)",
+                boxLevel: "現在ステージ", boxScore: "現在のスコア", boxTarget: "命中目標", boxAccuracy: "命中率", boxTime: "残り時間",
+                boardTitle: "射撃順位表", btnStart: "3Dシミュレーション開始", noData: "データなし", ghostTag: "1位のゴースト",
+                lobbyReady: "[ SYSTEM READY : ロビー待機中 ]", lobbyDesc: "上の設定を調整し、ボタンを押して射撃場を開始",
+                titleWin: "⚡ 特訓クリア！おめでとう！", titleTimeout: "⏰ 時間切れ！", titleAsiaWin: "🥢 💥 アジアン・シューター認定獲得！",
+                descFinalScore: "最終スコア", descProgress: "クリア進度", descLevel: "面", descTimeUsed: "所要時間", descSec: "秒", descAcc: "射撃正確度",
+                descNewRecord: "\n\n新記録達成！あなたの軌跡がゴーストとして録画されます！名前を入力：", descNoRecord: "\n\n1位のゴースト記録を破れませんでした。次回頑張りましょう！",
+                placeholderName: "コードネームを入力", btnConfirm: "確認", diffNames: { children:"キッズ", easy:"簡単", normal:"普通", hard:"困難", hell:"地獄", asia:"アジア" }
+            },
+            "ko": {
+                mainTitle: "TACTICAL SIMULATOR: 3D 고스트 레이싱 사격장 🎯", diffLabel: "시뮬레이션 난이도:", ghostLabel: "최고 플레이어 고스트 PK 활성화", langLabel: "언어 설정:",
+                optChild: "어린이 모드 (매우 쉬움)", optEasy: "쉬움 모드", optNormal: "일반 규격", optHard: "높은 어려움", optHell: "지옥 제한", optAsia: "아시아 난이도 (Meme Extreme)",
+                boxLevel: "현재 스테이지", boxScore: "현재 점수", boxTarget: "적중 목표", boxAccuracy: "명중률", boxTime: "남은 시간",
+                boardTitle: "로컬 명예의 전당", btnStart: "3D 전술 시뮬레이션 시작", noData: "데이터 없음", ghostTag: "1위 고스트",
+                lobbyReady: "[ 시스템 준비 완료 : 로비 대기 중 ]", lobbyDesc: "위의 설정을 조정한 후 버튼을 클릭하여 사격장 진입",
+                titleWin: "⚡ 특훈 성공적 완료!", titleTimeout: "⏰ 제한 시간 종료!", titleAsiaWin: "🥢 💥 아시안 슈터 절대 인증 획득!",
+                descFinalScore: "최종 점수", descProgress: "진행도", descLevel: "단계", descTimeUsed: "총 소요 시간", descSec: "초", descAcc: "사격 명중률",
+                descNewRecord: "\n\n축하합니다! 역사적 신기록! 당신의 궤적이 고스트로 녹화됩니다. 이름을 입력하세요:", descNoRecord: "\n\n1위 고스트의 기록을 깨지 못했습니다. 다시 도전해보세요!",
+                placeholderName: "닉네임을 입력하세요", btnConfirm: "확인", diffNames: { children:"어린이", easy:"쉬움", normal:"일반", hard:"어려움", hell:"지옥", asia:"아시아" }
+            }
+        };
+
+        function getLang() { return document.getElementById("selectLanguage").value; }
+
+        function switchLanguage() {
+            const lang = getLang();
+            const dict = i18n[lang];
+
+            // 更新靜態 UI
+            document.getElementById("ui-mainTitle").innerText = dict.mainTitle;
+            document.getElementById("ui-lblDiff").innerText = dict.diffLabel;
+            document.getElementById("ui-lblGhost").innerText = dict.ghostLabel;
+            document.getElementById("ui-lblLang").innerText = dict.langLabel;
+            
+            document.getElementById("opt-child").innerText = dict.optChild;
+            document.getElementById("opt-easy").innerText = dict.optEasy;
+            document.getElementById("opt-normal").innerText = dict.optNormal;
+            document.getElementById("opt-hard").innerText = dict.optHard;
+            document.getElementById("opt-hell").innerText = dict.optHell;
+            document.getElementById("opt-asia").innerText = dict.optAsia;
+
+            document.getElementById("ui-boxLevel").innerText = dict.boxLevel;
+            document.getElementById("ui-boxScore").innerText = dict.boxScore;
+            document.getElementById("ui-boxTarget").innerText = dict.boxTarget;
+            document.getElementById("ui-boxAccuracy").innerText = dict.boxAccuracy;
+            document.getElementById("ui-boxTime").innerText = dict.boxTime;
+            document.getElementById("ui-boardTitle").innerText = dict.boardTitle;
+            document.getElementById("btnStart").innerText = dict.btnStart;
+
+            // 更新排行榜顯示的難度中文/英文名
+            const diff = getDiff();
+            document.getElementById("lblBoardDiff").innerText = dict.diffNames[diff];
+
+            showLeaderboard();
+        }
+
+        // 六大難度配置參數
         const difficultySettings = {
-            children: { name: "兒童", gameTime: 180, reqHits: [5, 5, 5, 5, 5],    radius: [65, 60, 55, 50, 45], duration: [3000, 2800, 2600, 2400, 2200], missPenalty: 0 },
-            easy:     { name: "簡單", gameTime: 150, reqHits: [8, 8, 10, 10, 10],  radius: [50, 46, 42, 38, 35], duration: [2000, 1800, 1600, 1400, 1200], missPenalty: 2 },
-            normal:   { name: "普通", gameTime: 120, reqHits: [10, 10, 12, 12, 15], radius: [42, 38, 34, 30, 26], duration: [1500, 1300, 1100, 950,  800],  missPenalty: 5 },
-            hard:     { name: "困難", gameTime: 90,  reqHits: [12, 12, 15, 15, 20], radius: [34, 30, 26, 23, 20], duration: [1100, 950,  800,  650,  550],  missPenalty: 10 },
-            hell:     { name: "地獄", gameTime: 60,  reqHits: [15, 15, 18, 20, 25], radius: [25, 22, 19, 16, 14], duration: [750,  650,  550,  480,  400],  missPenalty: 20 },
-            asia:     { name: "亞洲", gameTime: 45,  reqHits: [15, 18, 20, 22, 30], radius: [18, 15, 12, 10, 8],  duration: [500,  430,  370,  310,  250],  missPenalty: 40 }
+            children: { name: "children", gameTime: 180, reqHits: [5, 5, 5, 5, 5],    radius: [65, 60, 55, 50, 45], duration: [3000, 2800, 2600, 2400, 2200], missPenalty: 0 },
+            easy:     { name: "easy",     gameTime: 150, reqHits: [8, 8, 10, 10, 10],  radius: [50, 46, 42, 38, 35], duration: [2000, 1800, 1600, 1400, 1200], missPenalty: 2 },
+            normal:   { name: "normal",   gameTime: 120, reqHits: [10, 10, 12, 12, 15], radius: [42, 38, 34, 30, 26], duration: [1500, 1300, 1100, 950,  800],  missPenalty: 5 },
+            hard:     { name: "hard",     gameTime: 90,  reqHits: [12, 12, 15, 15, 20], radius: [34, 30, 26, 23, 20], duration: [1100, 950,  800,  650,  550],  missPenalty: 10 },
+            hell:     { name: "hell",     gameTime: 60,  reqHits: [15, 15, 18, 20, 25], radius: [25, 22, 19, 16, 14], duration: [750,  650,  550,  480,  400],  missPenalty: 20 },
+            asia:     { name: "asia",     gameTime: 45,  reqHits: [15, 18, 20, 22, 30], radius: [18, 15, 12, 10, 8],  duration: [500,  430,  370,  310,  250],  missPenalty: 40 }
         };
 
         function getDiff() { return document.getElementById("selectDifficulty").value; }
@@ -279,7 +383,8 @@
         function changeDifficulty() {
             if (isPlaying) return;
             const diff = getDiff();
-            document.getElementById("lblBoardDiff").innerText = difficultySettings[diff].name;
+            const dict = i18n[getLang()];
+            document.getElementById("lblBoardDiff").innerText = dict.diffNames[diff];
             showLeaderboard();
         }
 
@@ -287,7 +392,7 @@
             const cfg = difficultySettings[getDiff()];
             score = 0; level = 1; hitsInLevel = 0; totalClicks = 0; successfulHits = 0;
             timeLeft = cfg.gameTime;
-            currentRunData = []; // 清空錄製
+            currentRunData = []; 
             document.getElementById("lblTime").classList.remove("time-warning");
             updateUI();
         }
@@ -300,8 +405,8 @@
 
             document.getElementById("btnStart").disabled = true;
             document.getElementById("selectDifficulty").disabled = true;
+            document.getElementById("selectLanguage").disabled = true;
 
-            // 讀取該難度榜首的影子紀錄
             const board = getLeaderboard();
             ghostRunData = (board.length > 0 && board[0].runData) ? board[0].runData : null;
             ghostIndex = 0;
@@ -322,7 +427,7 @@
                 }
                 document.getElementById("lblTime").innerText = timeLeft;
                 
-                // 👥 影子回放時鐘同步邏輯
+                // 👥 影子播放邏輯
                 if (ghostRunData && document.getElementById("chkGhostMode").checked) {
                     const currentMillis = performance.now() - gameStartTime;
                     while (ghostIndex < ghostRunData.length && ghostRunData[ghostIndex].time <= currentMillis) {
@@ -330,9 +435,8 @@
                         if (gEvent.type === 'click' || gEvent.type === 'hit') {
                             ghostMouse.x = gEvent.mx;
                             ghostMouse.y = gEvent.my;
-                            ghostLaserTimer = 8; // 觸發虛擬軌跡紅線開火特效
+                            ghostLaserTimer = 8; 
                         } else if (gEvent.type === 'spawn') {
-                            // 影子移動滑鼠瞄準新靶子
                             ghostMouse.x = gEvent.projX;
                             ghostMouse.y = gEvent.projY;
                         }
@@ -361,7 +465,6 @@
             target3D.z = Math.random() * (900 - 220) + 220;
             target3D.baseRadius = cfg.radius[level - 1];
 
-            // 限制世界座標範圍
             const maxW = 210;
             target3D.x = Math.random() * (maxW * 2) - maxW;
             target3D.y = Math.random() * (180 - (-50)) + (-50);
@@ -400,6 +503,7 @@
             ctx.fillStyle = "#020206";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             const size = 250; 
+            const dict = i18n[getLang()];
 
             // 1. 遠方終點
             const farPos = project(0, 0, 1000);
@@ -464,45 +568,36 @@
             ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, (1 - target3D.z / 1000) * 0.5)})`;
             ctx.fill();
 
-            // 靶面 3D 斜切壓扁
+            // 斜切
             let radiusX = r, radiusY = r;
             const xRatio = target3D.x / size, yRatio = target3D.y / size;
             if (Math.abs(xRatio) > 0.35 && Math.abs(xRatio) > Math.abs(yRatio)) radiusX = r * (1 - Math.abs(xRatio) * 0.35);
             else if (yRatio < -0.35) radiusY = r * (1 - Math.abs(yRatio) * 0.35);
 
-            // 繪製電子霓虹靶
+            // 電子靶
             ctx.shadowBlur = Math.max(5, 25 * targetProj.scale); ctx.shadowColor = "#00ffcc";
             ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, 0, 0, Math.PI * 2); ctx.fillStyle = "#00ffcc"; ctx.fill();
             ctx.shadowBlur = 0;
             ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2); ctx.fillStyle = "#111116"; ctx.fill();
             ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.28, radiusY * 0.28, 0, 0, Math.PI * 2); ctx.fillStyle = "#ff3838"; ctx.fill();
 
-            // 👥 4. 影子玩家 (Ghost Player) 渲染繪製
+            // 👥 4. 影子玩家
             if (isPlaying && ghostRunData && document.getElementById("chkGhostMode").checked) {
-                // 繪製半透明虛擬槍線（如果影子正在開火）
                 if (ghostLaserTimer > 0) {
-                    ctx.beginPath();
-                    ctx.moveTo(300, 600); // 從螢幕底部發射
-                    ctx.lineTo(ghostMouse.x, ghostMouse.y);
-                    ctx.strokeStyle = `rgba(255, 56, 56, ${ghostLaserTimer / 8 * 0.4})`;
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(300, 600); ctx.lineTo(ghostMouse.x, ghostMouse.y);
+                    ctx.strokeStyle = `rgba(255, 56, 56, ${ghostLaserTimer / 8 * 0.4})`; ctx.lineWidth = 3; ctx.stroke();
                     ghostLaserTimer--;
                 }
-                // 繪製影子準星
-                ctx.strokeStyle = "rgba(255, 56, 56, 0.6)";
-                ctx.lineWidth = 2;
-                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 56, 56, 0.6)"; ctx.lineWidth = 2; ctx.beginPath();
                 ctx.arc(ghostMouse.x, ghostMouse.y, 8, 0, Math.PI * 2);
                 ctx.moveTo(ghostMouse.x - 14, ghostMouse.y); ctx.lineTo(ghostMouse.x + 14, ghostMouse.y);
                 ctx.moveTo(ghostMouse.x, ghostMouse.y - 14); ctx.lineTo(ghostMouse.x, ghostMouse.y + 14);
                 ctx.stroke();
-                ctx.fillStyle = "rgba(255, 56, 56, 0.7)";
-                ctx.font = "10px monospace";
-                ctx.fillText("榜首影子", ghostMouse.x + 18, ghostMouse.y + 4);
+                ctx.fillStyle = "rgba(255, 56, 56, 0.7)"; ctx.font = "10px monospace"; ctx.textAlign = "left";
+                ctx.fillText(dict.ghostTag, ghostMouse.x + 18, ghostMouse.y + 4);
             }
 
-            // 大廳文字 UI
+            // 大廳 HUD 文字
             if (!isPlaying) {
                 ctx.strokeStyle = "rgba(0, 255, 204, 0.4)"; ctx.lineWidth = 2; const len = 25, pad = 15;
                 ctx.beginPath(); ctx.moveTo(pad, pad+len); ctx.lineTo(pad, pad); ctx.lineTo(pad+len, pad); ctx.stroke();
@@ -512,9 +607,9 @@
 
                 const pulse = Math.abs(Math.sin(performance.now() / 300));
                 ctx.fillStyle = `rgba(0, 255, 204, ${0.4 + pulse * 0.6})`; ctx.font = "bold 15px 'Segoe UI', monospace"; ctx.textAlign = "center";
-                ctx.fillText(`[ SYSTEM READY : LOBBY WAITING ]`, 300, 45);
+                ctx.fillText(dict.lobbyReady, 300, 45);
                 ctx.fillStyle = "rgba(162, 162, 194, 0.7)"; ctx.font = "13px 'Segoe UI'";
-                ctx.fillText("調整上方難度，並點擊「開啟 3D 戰術模擬」解鎖靶場", 300, 560);
+                ctx.fillText(dict.lobbyDesc, 300, 560);
             }
         }
 
@@ -542,7 +637,7 @@
                 
                 let distanceBonus = Math.round((target3D.z - 200) / 15);
                 let basePoints = level * 10;
-                if (getDiff() === 'asia') basePoints *= 3; // 亞洲模式分數翻倍
+                if (getDiff() === 'asia') basePoints *= 3; 
                 if (getDiff() === 'hell') basePoints *= 2;
 
                 score += basePoints + Math.max(0, distanceBonus); 
@@ -593,21 +688,28 @@
 
             document.getElementById("btnStart").disabled = false;
             document.getElementById("selectDifficulty").disabled = false;
+            document.getElementById("selectLanguage").disabled = false;
 
+            const dict = i18n[getLang()];
             const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
-            let title = isWin ? "⚡ 特訓通關！" : "⏰ 限制時間截止！";
-            if (isWin && getDiff() === 'asia') title = "🥢 💥 恭喜你獲得亞洲神射手認證！";
+            
+            let title = isWin ? dict.titleWin : dict.titleTimeout;
+            if (isWin && getDiff() === 'asia') title = dict.titleAsiaWin;
 
             const maxDuration = difficultySettings[getDiff()].gameTime;
             const timeUsed = (maxDuration - parseFloat(timeLeft)).toFixed(2);
-            let desc = `最終得分：${score} 分\n通關進度：第 ${level} 關\n總計耗時：${timeUsed} 秒\n射擊精準度：${accuracy}%`;
+            
+            let desc = `${dict.descFinalScore}：${score}\n${dict.descProgress}：${level} ${dict.descLevel}\n${dict.descTimeUsed}：${timeUsed} ${dict.descSec}\n${dict.descAcc}：${accuracy}%`;
             
             document.getElementById("modal-title").innerText = title;
+            document.getElementById("playerName").placeholder = dict.placeholderName;
+            document.getElementById("modalBtn").innerText = dict.btnConfirm;
+
             if (checkHighScore(score)) {
-                desc += "\n\n恭喜打破歷史紀錄！你的開槍軌跡將被錄製為影子！請輸入代號：";
+                desc += dict.descNewRecord;
                 document.getElementById("name-input-area").style.display = "block";
             } else {
-                desc += "\n\n未能打破目前第一名的影子紀錄，請繼續加油！";
+                desc += dict.descNoRecord;
                 document.getElementById("name-input-area").style.display = "none";
             }
             
@@ -622,7 +724,7 @@
             const nameInput = document.getElementById("playerName");
             if (document.getElementById("name-input-area").style.display === "block") {
                 const name = nameInput.value.trim() || "Ranger";
-                saveHighScore(name, score, currentRunData); // 把當前錄製的軌跡存入榜首
+                saveHighScore(name, score, currentRunData); 
                 nameInput.value = "";
             }
             document.getElementById("modal-overlay").style.display = "none";
@@ -631,7 +733,7 @@
 
         function getLeaderboard() {
             const diff = getDiff();
-            const board = localStorage.getItem(`aim_leaderboard_v6_${diff}`);
+            const board = localStorage.getItem(`aim_leaderboard_lang_${diff}`);
             return board ? JSON.parse(board) : [];
         }
 
@@ -645,8 +747,6 @@
         function saveHighScore(name, currentScore, runData) {
             const diff = getDiff();
             let board = getLeaderboard();
-            
-            // 只有第一名能保存影子軌跡 runData 以節省儲存空間，其他人設為 null
             const isNewNumberOne = board.length === 0 || currentScore > board[0].score;
             
             board.push({
@@ -655,36 +755,34 @@
                 date: new Date().toLocaleDateString(),
                 runData: isNewNumberOne ? runData : null 
             });
-            
             board.sort((a, b) => b.score - a.score);
-            
-            // 重新整理榜首：確保排序後的絕對第一名保留影子
             for (let i = 0; i < board.length; i++) {
                 if (i > 0) board[i].runData = null; 
             }
-            
             board = board.slice(0, 5);
-            localStorage.setItem(`aim_leaderboard_v6_${diff}`, JSON.stringify(board));
+            localStorage.setItem(`aim_leaderboard_lang_${diff}`, JSON.stringify(board));
         }
 
         function showLeaderboard() {
             const board = getLeaderboard();
             const listEl = document.getElementById("leaderList");
+            const dict = i18n[getLang()];
             listEl.innerHTML = "";
             if (board.length === 0) {
-                listEl.innerHTML = "<li>暫無資料</li>";
+                listEl.innerHTML = `<li>${dict.noData}</li>`;
                 return;
             }
             board.forEach((item, index) => {
                 const li = document.createElement("li");
-                const hasGhost = (index === 0 && item.runData) ? " 👻(自帶影子)" : "";
-                li.innerHTML = `<strong>${item.name}</strong> - ${item.score} 點 (${item.date})${hasGhost}`;
+                const hasGhost = (index === 0 && item.runData) ? " 👻" : "";
+                li.innerHTML = `<strong>${item.name}</strong> - ${item.score} (${item.date})${hasGhost}`;
                 listEl.appendChild(li);
             });
         }
 
+        // 預設執行語系初始化
+        switchLanguage();
         updateLobby();
-        showLeaderboard();
     </script>
 </body>
 </html>
