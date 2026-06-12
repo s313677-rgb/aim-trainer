@@ -238,3 +238,229 @@
                 timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
                 document.getElementById("lblTime").innerText = timeElapsed;
             },
+spawnTarget();
+        }
+
+        // 生成靶
+        function spawnTarget() {
+            if (!isPlaying) return;
+            clearTimeout(targetTimeout);
+
+            const settings = levelSettings[level];
+            
+            // 隨機生成坐標，確保靶不會切到畫布邊緣
+            const margin = settings.radius + 10;
+            target.x = Math.random() * (canvas.width - margin * 2) + margin;
+            target.y = Math.random() * (canvas.height - margin * 2) + margin;
+            target.radius = settings.radius;
+
+            drawCanvas();
+
+            // 若時間內沒點到，自動刷新到下一個位置
+            targetTimeout = setTimeout(() => {
+                spawnTarget();
+            }, settings.duration);
+        }
+
+        // 繪製畫布與靶心
+        function drawCanvas() {
+            // 清空畫布
+            ctx.fillStyle = "#111116";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 畫網格背景（增加科技/訓練場感）
+            ctx.strokeStyle = "#22222b";
+            ctx.lineWidth = 1;
+            for(let i = 50; i < canvas.width; i += 50) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+
+            if (!isPlaying) return;
+
+            // 繪製同心圓靶心 (紅底白圈)
+            const r = target.radius;
+            
+            // 外圈
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = "#e74c3c";
+            ctx.fill();
+
+            // 中圈
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, r * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            // 內圈中心點
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, r * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = "#e74c3c";
+            ctx.fill();
+        }
+
+        // 監聽畫布點擊 (開槍)
+        canvas.addEventListener("mousedown", (e) => {
+            if (!isPlaying) return;
+
+            totalClicks++;
+
+            // 獲取滑鼠在畫布上的精確相對坐標
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // 計算滑鼠點擊點與靶心的距離 (勾股定理)
+            const distance = Math.sqrt((mouseX - target.x) ** 2 + (mouseY - target.y) ** 2);
+
+            if (distance <= target.radius) {
+                // 🎯 擊中靶
+                successfulHits++;
+                hitsInLevel++;
+                
+                // 關卡加分：關卡越高，單發分數越高
+                score += level * 10; 
+
+                // 檢查是否達到該關卡過關目標
+                const req = levelSettings[level].requiredHits;
+                if (hitsInLevel >= req) {
+                    if (level < 5) {
+                        nextLevel();
+                    } else {
+                        endGame(true); // 五關全過，破台！
+                    }
+                } else {
+                    spawnTarget(); // 繼續下一個靶
+                }
+            } else {
+                // ❌ 脫靶 (倒扣分數，最低扣到0分)
+                score = Math.max(0, score - 5);
+                drawFlashBorder(); // 脫靶閃爍紅邊提示
+            }
+
+            updateUI();
+        });
+
+        // 升關邏輯
+        function nextLevel() {
+            level++;
+            hitsInLevel = 0;
+            updateUI();
+
+            // 過關時畫布綠色閃爍特效
+            ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 稍微停頓 200ms 後再出新靶，給玩家反應時間
+            isPlaying = false;
+            setTimeout(() => {
+                if(totalClicks > 0) { // 確保沒被手動重置
+                    isPlaying = true;
+                    spawnTarget();
+                }
+            }, 300);
+        }
+
+        // 脫靶時的畫布閃動提示
+        function drawFlashBorder() {
+            ctx.strokeStyle = "rgba(231, 76, 60, 0.5)";
+            ctx.lineWidth = 10;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // 更新介面文字
+        function updateUI() {
+            const req = levelSettings[level] ? levelSettings[level].requiredHits : 0;
+            document.getElementById("lblLevel").innerText = level;
+            document.getElementById("lblScore").innerText = score;
+            document.getElementById("lblTarget").innerText = `${hitsInLevel} / ${req}`;
+            
+            const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
+            document.getElementById("lblAccuracy").innerText = accuracy;
+        }
+
+        // 結束遊戲
+        function endGame(isWin) {
+            isPlaying = false;
+            clearTimeout(targetTimeout);
+            clearInterval(timerInterval);
+            
+            document.getElementById("btnStart").disabled = false;
+            document.getElementById("btnStart").style.backgroundColor = "#e74c3c";
+
+            const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
+            const title = isWin ? "⚡ 恭喜完成全五關特訓！" : "訓練結束";
+            
+            let desc = `最終得分：${score} 分\n總耗時：${timeElapsed} 秒\n整體精準度：${accuracy}%`;
+            
+            document.getElementById("modal-title").innerText = title;
+            
+            if (checkHighScore(score)) {
+                desc += "\n\n恭喜你擠進神射手排行榜！請輸入名字：";
+                document.getElementById("name-input-area").style.display = "block";
+            } else {
+                document.getElementById("name-input-area").style.display = "none";
+            }
+            
+            document.getElementById("modal-desc").innerText = desc;
+            document.getElementById("modal-overlay").style.display = "flex";
+            
+            drawCanvas(); // 清空畫布上的靶
+        }
+
+        function closeModal() {
+            const nameInput = document.getElementById("playerName");
+            if (document.getElementById("name-input-area").style.display === "block") {
+                const name = nameInput.value.trim() || "未知小兵";
+                saveHighScore(name, score);
+                nameInput.value = "";
+            }
+            document.getElementById("modal-overlay").style.display = "none";
+            showLeaderboard();
+        }
+
+        // --- 排行榜 LocalStorage 邏輯 ---
+        function getLeaderboard() {
+            const board = localStorage.getItem("aim_leaderboard");
+            return board ? JSON.parse(board) : [];
+        }
+
+        function checkHighScore(currentScore) {
+            if (currentScore === 0) return false;
+            const board = getLeaderboard();
+            if (board.length < 5) return true;
+            return currentScore > board[board.length - 1].score;
+        }
+
+        function saveHighScore(name, currentScore) {
+            let board = getLeaderboard();
+            board.push({name: name, score: currentScore, date: new Date().toLocaleDateString()});
+            board.sort((a, b) => b.score - a.score);
+            board = board.slice(0, 5);
+            localStorage.setItem("aim_leaderboard", JSON.stringify(board));
+        }
+
+        function showLeaderboard() {
+            const board = getLeaderboard();
+            const listEl = document.getElementById("leaderList");
+            listEl.innerHTML = "";
+            
+            if (board.length === 0) {
+                listEl.innerHTML = "<li>暫無資料</li>";
+                return;
+            }
+
+            board.forEach(item => {
+                const li = document.createElement("li");
+                li.innerHTML = `<strong>${item.name}</strong> - ${item.score} 分 (${item.date})`;
+                listEl.appendChild(li);
+            });
+        }
+
+        // 初始繪製背景與載入排行榜
+        drawCanvas();
+        showLeaderboard();
+    </script>
+</body>
+</html>
