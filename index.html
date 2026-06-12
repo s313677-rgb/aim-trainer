@@ -1,3 +1,9 @@
+對的！沒問題，這份全新的程式碼已經包含了最一開始、最完整的漂亮黑紅配色主視覺版面（包括打靶畫布、計分板、前五名排行榜等），而且還幫你升級加入了 2 分鐘倒數計時的功能！
+
+為了讓你看得更清楚，這裡把整份「包含完整主視覺 + 2分鐘倒數計時」的程式碼整理好。
+
+請點擊 GitHub 的 index.html 編輯器（鉛筆圖示 ✏️），把裡面的內容全選刪除清空，然後複製下方這一整份代碼貼進去儲存（Commit changes）：
+
 HTML
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -347,7 +353,7 @@ HTML
                 successfulHits++;
                 hitsInLevel++;
                 
-                // 關卡加分：關卡越高，單發分數越高
+                // 關卡加分
                 score += level * 10; 
 
                 // 檢查是否達到該關卡過關目標
@@ -362,7 +368,7 @@ HTML
                     spawnTarget(); // 繼續下一個靶
                 }
             } else {
-                // ❌ 脫靶 (倒扣分數，最低扣到0分)
+                // ❌ 脫靶 (倒扣分數)
                 score = Math.max(0, score - 5);
                 drawFlashBorder(); // 脫靶閃爍紅邊提示
             }
@@ -380,10 +386,9 @@ HTML
             ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // 稍微停頓 300ms 後再出新靶，給玩家反應時間
             isPlaying = false;
             setTimeout(() => {
-                if(totalClicks > 0 && timeLeft > 0) { // 確保沒被手動重置且時間未到
+                if(totalClicks > 0 && timeLeft > 0) { 
                     isPlaying = true;
                     spawnTarget();
                 }
