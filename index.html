@@ -42,6 +42,12 @@
             border-radius: 12px;
             border: 1px solid #222533;
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel-row {
+            display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 15px;
@@ -60,7 +66,7 @@
             font-weight: bold;
         }
 
-        select {
+        select, .panel-input {
             background-color: #09090f;
             color: #00ffcc;
             border: 1px solid #00ffcc;
@@ -69,8 +75,27 @@
             font-size: 13px;
             font-weight: bold;
             outline: none;
+        }
+        
+        .panel-input {
+            width: 110px;
+            color: #fff;
+            border: 1px solid #222533;
+            transition: border 0.2s;
+        }
+        .panel-input:focus { border-color: #00ffcc; }
+
+        .btn-sm {
+            background: linear-gradient(135deg, #00ffcc 0%, #00b3ff 100%);
+            color: #05050a;
+            border: none;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 6px;
             cursor: pointer;
         }
+        .btn-sm:hover { opacity: 0.9; }
 
         /* 遊戲核心容器 */
         #game-container {
@@ -174,12 +199,9 @@
             background: rgba(4, 4, 8, 0.9); justify-content: center; align-items: center; z-index: 10;
         }
         #modal { background: #13131c; padding: 35px; border-radius: 16px; text-align: center; border: 2px solid #00ffcc; max-width: 400px; width: 90%; }
-        #modal input { padding: 12px; width: 80%; margin: 8px 0; border: 1px solid #222533; background: #09090f; color: #fff; border-radius: 6px; text-align: center; font-size: 15px; }
         
-        .user-badge {
-            color: #00ffcc !important;
-            font-weight: bold;
-        }
+        .user-badge { color: #00ffcc !important; font-weight: bold; }
+        #auth-msg { font-size: 12px; font-weight: bold; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -188,34 +210,46 @@
     
     <div id="game-layout">
         <div id="control-panel">
-            <div class="panel-section">
-                <div class="panel-label" id="ui-lblDiff">模擬難度：</div>
-                <select id="selectDifficulty" onchange="changeDifficulty()">
-                    <option value="children" id="opt-child">兒童模式 (極易)</option>
-                    <option value="easy" id="opt-easy">簡單模式</option>
-                    <option value="normal" id="opt-normal" selected>普通規格</option>
-                    <option value="hard" id="opt-hard">高度困難</option>
-                    <option value="hell" id="opt-hell">地獄限制</option>
-                    <option value="asia" id="opt-asia">亞洲難度 (Meme Extreme)</option>
-                </select>
-            </div>
+            <div class="panel-row">
+                <div class="panel-section">
+                    <div class="panel-label" id="ui-lblDiff">模擬難度：</div>
+                    <select id="selectDifficulty" onchange="changeDifficulty()">
+                        <option value="children" id="opt-child">兒童模式 (極易)</option>
+                        <option value="easy" id="opt-easy">簡單模式</option>
+                        <option value="normal" id="opt-normal" selected>普通規格</option>
+                        <option value="hard" id="opt-hard">高度困難</option>
+                        <option value="hell" id="opt-hell">地獄限制</option>
+                        <option value="asia" id="opt-asia">亞洲難度 (Meme Extreme)</option>
+                    </select>
+                </div>
 
-            <div class="panel-section">
-                <div class="switch-container">
-                    <input type="checkbox" id="chkGhostMode" checked>
-                    <label for="chkGhostMode" id="ui-lblGhost" style="font-size:13px; font-weight:bold; color:#ff3838; cursor:pointer;">開啟頂尖玩家影子 PK</label>
+                <div class="panel-section">
+                    <div class="switch-container">
+                        <input type="checkbox" id="chkGhostMode" checked>
+                        <label for="chkGhostMode" id="ui-lblGhost" style="font-size:13px; font-weight:bold; color:#ff3838; cursor:pointer;">開啟頂尖玩家影子 PK</label>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="panel-label" id="ui-lblLang">語言設置：</div>
+                    <select id="selectLanguage" onchange="switchLanguage()">
+                        <option value="zh-TW" selected>繁體中文</option>
+                        <option value="zh-CN">简体中文</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                        <option value="ko">한국어</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="panel-section">
-                <div class="panel-label" id="ui-lblLang">語言設置：</div>
-                <select id="selectLanguage" onchange="switchLanguage()">
-                    <option value="zh-TW" selected>繁體中文</option>
-                    <option value="zh-CN">简体中文</option>
-                    <option value="en">English</option>
-                    <option value="ja">日本語</option>
-                    <option value="ko">한국어</option>
-                </select>
+            <div class="panel-row" style="border-top: 1px dashed #222533; padding-top: 8px;">
+                <div class="panel-section" id="login-form-area">
+                    <span class="panel-label" id="ui-lblAuthArea">戰術認證：</span>
+                    <input type="text" id="authName" class="panel-input" placeholder="代號" maxlength="8">
+                    <input type="password" id="authPass" class="panel-input" placeholder="密碼">
+                    <button class="btn-sm" id="btnAuth" onclick="lobbyLogin()">登入 / 註冊</button>
+                    <span id="auth-msg"></span>
+                </div>
             </div>
         </div>
 
@@ -245,15 +279,8 @@
     <div id="modal-overlay">
         <div id="modal">
             <h2 id="modal-title" style="color:#00ffcc;">訓練結束</h2>
-            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da; text-align: left; margin-bottom: 10px;"></p>
-            
-            <div id="name-input-area" style="display:none; border-top: 1px dashed #333; padding-top: 10px;">
-                <input type="text" id="playerName" placeholder="請輸入你的代號" maxlength="8">
-                <input type="password" id="playerPassword" placeholder="設定或輸入密碼防止被篡改">
-                <p id="auth-hint" style="color:#ff3838; font-size:12px; margin: 4px 0 0 0; text-align: center; font-weight: bold;"></p>
-            </div>
-            
-            <button class="btn" id="modalBtn" onclick="processModalAction()" style="margin-top:10px;">確認</button>
+            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da; text-align: left; margin-bottom: 15px;"></p>
+            <button class="btn" onclick="closeModal()">確認</button>
         </div>
     </div>
 
@@ -267,7 +294,7 @@
         let gameStartTime = 0, timeLeft = 120;
         let isPlaying = false;
         let targetTimeout, timerInterval;
-        let currentUser = "Guest"; // 儲存當前成功解鎖的代號
+        let currentUser = "Guest"; // 預設訪客身分
 
         // 3D 投影
         const vpX = 300, vpY = 300, fov = 300;
@@ -286,7 +313,7 @@
         let ghostMouse = { x: 300, y: 300 }; 
         let ghostLaserTimer = 0;   
 
-        // 🌐 多國語言字典 (i18n) 已同步整合帳密防佔用提示
+        // 🌐 多國語言字典 (i18n)
         const i18n = {
             "zh-TW": {
                 mainTitle: "TACTICAL SIMULATOR：3D 影子競速靶場 🎯", diffLabel: "模擬難度：", ghostLabel: "開啟頂尖玩家影子 PK", langLabel: "語言設置：",
@@ -296,9 +323,9 @@
                 lobbyReady: "[ 系統就緒 : 大廳待機中 ]", lobbyDesc: "調整上方設定，點擊按鈕解鎖靶場",
                 titleWin: "⚡ 特訓成功通關！", titleTimeout: "⏰ 限制時間截止！", titleAsiaWin: "🥢 💥 獲得亞洲神射手絕對認證！",
                 descFinalScore: "最終得分", descProgress: "通關進度", descLevel: "關", descTimeUsed: "總計耗時", descSec: "秒", descAcc: "射擊精準度",
-                descNewRecord: "\n\n恭喜打破排行紀錄！請輸入代號與自訂密碼以防他人占用：", descNoRecord: "\n\n未能打破第一名的影子紀錄，請繼續加油！",
-                placeholderName: "請輸入你的代號", placeholderPass: "設定密碼 (新名字) 或 輸入密碼 (舊玩家)", btnConfirm: "確認", 
-                errWrongPass: "❌ 密碼錯誤！該名稱已被占有，請更換代號或輸入正確密碼！", errEmpty: "❌ 請確實填寫代號與密碼！",
+                descNewRecord: "\n\n🎉 恭喜打破排行紀錄！已自動為你綁定更新！", descNoRecord: "\n\n未能打破第一名的影子紀錄，請繼續加油！",
+                placeholderName: "代號", placeholderPass: "密碼", btnConfirm: "確認", lblAuthArea: "戰術認證：", btnAuth: "登入 / 註冊",
+                msgSuccessReg: " 秒速註冊並登入成功！", msgSuccessLog: " 驗證成功，歡迎回來！", msgWrongPass: "❌ 密碼錯誤！此名字已被占有", msgEmpty: "❌ 請填寫代號與密碼",
                 diffNames: { children:"兒童", easy:"簡單", normal:"普通", hard:"困難", hell:"地獄", asia:"亞洲" }
             },
             "zh-CN": {
@@ -309,9 +336,9 @@
                 lobbyReady: "[ 系统就绪 : 大厅待机中 ]", lobbyDesc: "调整上方设置，点击按钮解锁靶场",
                 titleWin: "⚡ 特训成功通关！", titleTimeout: "⏰ 限制时间截止！", titleAsiaWin: "🥢 💥 获得亚洲神射手绝对认证！",
                 descFinalScore: "最终得分", descProgress: "通关进度", descLevel: "关", descTimeUsed: "总计耗时", descSec: "秒", descAcc: "射击精准度",
-                descNewRecord: "\n\n恭喜打破排行纪录！请输入代号与自订密码以防他人占用：", descNoRecord: "\n\n未能打破第一名的影子纪录，请继续加油！",
-                placeholderName: "请输入您的代号", placeholderPass: "设置密码 (新名字) 或 输入密码 (旧玩家)", btnConfirm: "确认",
-                errWrongPass: "❌ 密码错误！该名称已被占有，请更换代号或输入正确密码！", errEmpty: "❌ 请确实填写代号与密码！",
+                descNewRecord: "\n\n🎉 恭喜打破排行纪录！已自动为您绑定更新！", descNoRecord: "\n\n未能打破第一名的影子纪录，请继续加油！",
+                placeholderName: "代号", placeholderPass: "密码", btnConfirm: "确认", lblAuthArea: "战术认证：", btnAuth: "登录 / 注册",
+                msgSuccessReg: " 秒速注册并登录成功！", msgSuccessLog: " 验证成功，欢迎回来！", msgWrongPass: "❌ 密码错误！此名字已被占有", msgEmpty: "❌ 请填写代号与密码",
                 diffNames: { children:"儿童", easy:"简单", normal:"普通", hard:"困难", hell:"地狱", asia:"亚洲" }
             },
             "en": {
@@ -322,9 +349,9 @@
                 lobbyReady: "[ SYSTEM READY : LOBBY WAITING ]", lobbyDesc: "Adjust settings above, click button to unlock range",
                 titleWin: "⚡ Training Completed Successfully!", titleTimeout: "⏰ Time Limit Reached!", titleAsiaWin: "🥢 💥 ASIAN SHOOTER CERTIFIED!",
                 descFinalScore: "Final Score", descProgress: "Progress", descLevel: "Lvl", descTimeUsed: "Time Elapsed", descSec: "s", descAcc: "Accuracy",
-                descNewRecord: "\n\nCongrats! New Record! Enter your callsign and password to secure your name:", descNoRecord: "\n\nFailed to beat the Top 1 Ghost record. Keep trying!",
-                placeholderName: "Enter your name", placeholderPass: "Set password (New) or Enter password (Returning)", btnConfirm: "Confirm",
-                errWrongPass: "❌ Incorrect Password! Name occupied. Use another name or correct password.", errEmpty: "❌ Callsign and Password cannot be empty!",
+                descNewRecord: "\n\n🎉 New Record! Automatically saved under your identity!", descNoRecord: "\n\nFailed to beat the Top 1 Ghost record. Keep trying!",
+                placeholderName: "ID", placeholderPass: "Pass", btnConfirm: "Confirm", lblAuthArea: "Auth:", btnAuth: "Login/Reg",
+                msgSuccessReg: " Registered & Logged in!", msgSuccessLog: " Login Success! Welcome back.", msgWrongPass: "❌ Wrong Password! Name taken.", msgEmpty: "❌ ID and Password required",
                 diffNames: { children:"Kids", easy:"Easy", normal:"Normal", hard:"Hard", hell:"Hell", asia:"Asian" }
             },
             "ja": {
@@ -335,9 +362,9 @@
                 lobbyReady: "[ SYSTEM READY : ロビー待機中 ]", lobbyDesc: "上の設定を調整し、ボタンを押して射撃場を開始",
                 titleWin: "⚡ 特訓クリア！おめでとう！", titleTimeout: "⏰ 時間切れ！", titleAsiaWin: "🥢 💥 アジアン・シューター認定獲得！",
                 descFinalScore: "最終スコア", descProgress: "クリア進度", descLevel: "面", descTimeUsed: "所要時間", descSec: "秒", descAcc: "射撃正確度",
-                descNewRecord: "\n\nランクイン達成！他の人に使われないよう、名前とパスワードを入力してください：", descNoRecord: "\n\n1位のゴースト記録を破れませんでした。次回頑張りましょう！",
-                placeholderName: "コードネームを入力", placeholderPass: "新規パスワード設定 または パスワード入力", btnConfirm: "確認",
-                errWrongPass: "❌ パスワードが違います！この名前は既に占有されています。", errEmpty: "❌ 名前とパスワードを入力してください！",
+                descNewRecord: "\n\n🎉 新記録達成！あなたのアカウントに自動保存されました！", descNoRecord: "\n\n1位のゴースト記録を破れませんでした。次回頑張りましょう！",
+                placeholderName: "ID", placeholderPass: "パス", btnConfirm: "確認", lblAuthArea: "認証情報：", btnAuth: "ログイン/登録",
+                msgSuccessReg: " 登録とログインに成功しました！", msgSuccessLog: " 認証成功！おかえりなさい。", msgWrongPass: "❌ パスワード不一致。占有されています。", msgEmpty: "❌ IDとパスワードを入力してください",
                 diffNames: { children:"キッズ", easy:"簡単", normal:"普通", hard:"困難", hell:"地獄", asia:"アジア" }
             },
             "ko": {
@@ -348,9 +375,9 @@
                 lobbyReady: "[ 시스템 준비 완료 : 로비 대기 중 ]", lobbyDesc: "위의 설정을 조정한 후 버튼을 클릭하여 사격장 진입",
                 titleWin: "⚡ 특훈 성공적 완료!", titleTimeout: "⏰ 제한 시간 종료!", titleAsiaWin: "🥢 💥 아시안 슈터 절대 인증 획득!",
                 descFinalScore: "최종 점수", descProgress: "진행도", descLevel: "단계", descTimeUsed: "총 소요 시간", descSec: "초", descAcc: "사격 명중률",
-                descNewRecord: "\n\n순위권 진입 완료! 다른 사람의 도용을 방지하기 위해 닉네임과 비밀번호를 입력하세요:", descNoRecord: "\n\n1위 고스트의 기록을 깨지 못했습니다. 다시 도전해보세요!",
-                placeholderName: "닉네임을 입력하세요", placeholderPass: "비밀번호 설정 (신규) 또는 비밀번호 입력 (기존)", btnConfirm: "확인",
-                errWrongPass: "❌ 비밀번호가 틀렸습니다! 이미 점유된 이름입니다. 다른 이름을 사용하세요.", errEmpty: "❌ 닉네임과 비밀번호를 모두 입력해야 합니다!",
+                descNewRecord: "\n\n🎉 신기록 달성! 현재 계정으로 자동 저장되었습니다!", descNoRecord: "\n\n1위 고스트의 기록을 깨지 못했습니다. 다시 도전해보세요!",
+                placeholderName: "아이디", placeholderPass: "암호", btnConfirm: "확인", lblAuthArea: "전술 인증:", btnAuth: "로그인 / 등록",
+                msgSuccessReg: " 가입 및 로그인 성공!", msgSuccessLog: " 인증 성공! 환영합니다.", msgWrongPass: "❌ 암호 오류! 이미 선점된 이름입니다.", msgEmpty: "❌ 아이디와 암호를 입력하세요",
                 diffNames: { children:"어린이", easy:"쉬움", normal:"일반", hard:"어려움", hell:"지옥", asia:"아시아" }
             }
         };
@@ -365,6 +392,11 @@
             document.getElementById("ui-lblDiff").innerText = dict.diffLabel;
             document.getElementById("ui-lblGhost").innerText = dict.ghostLabel;
             document.getElementById("ui-lblLang").innerText = dict.langLabel;
+            document.getElementById("ui-lblAuthArea").innerText = dict.lblAuthArea;
+            document.getElementById("btnAuth").innerText = dict.btnAuth;
+            
+            document.getElementById("authName").placeholder = dict.placeholderName;
+            document.getElementById("authPass").placeholder = dict.placeholderPass;
             
             document.getElementById("opt-child").innerText = dict.optChild;
             document.getElementById("opt-easy").innerText = dict.optEasy;
@@ -386,6 +418,41 @@
             document.getElementById("lblBoardDiff").innerText = dict.diffNames[diff];
 
             showLeaderboard();
+        }
+
+        // 🔐 大廳登入/註冊核心邏輯
+        function lobbyLogin() {
+            const dict = i18n[getLang()];
+            const name = document.getElementById("authName").value.trim();
+            const pass = document.getElementById("authPass").value.trim();
+            const msgEl = document.getElementById("auth-msg");
+
+            if (!name || !pass) {
+                msgEl.style.color = "#ff3838";
+                msgEl.innerText = dict.msgEmpty;
+                return;
+            }
+
+            let accounts = JSON.parse(localStorage.getItem("aim_accounts") || "{}");
+
+            if (accounts[name]) {
+                if (accounts[name] !== pass) {
+                    msgEl.style.color = "#ff3838";
+                    msgEl.innerText = dict.msgWrongPass;
+                    return;
+                }
+                msgEl.style.color = "#00ffcc";
+                msgEl.innerText = "✔" + dict.msgSuccessLog;
+            } else {
+                accounts[name] = pass;
+                localStorage.setItem("aim_accounts", JSON.stringify(accounts));
+                msgEl.style.color = "#f1c40f";
+                msgEl.innerText = "✔" + dict.msgSuccessReg;
+            }
+
+            currentUser = name;
+            document.getElementById("lblUser").innerText = currentUser;
+            document.getElementById("authPass").value = ""; // 清空密碼欄保障安全
         }
 
         const difficultySettings = {
@@ -422,9 +489,13 @@
             resetGame();
             isPlaying = true;
 
+            // 鎖定大廳面板
             document.getElementById("btnStart").disabled = true;
             document.getElementById("selectDifficulty").disabled = true;
             document.getElementById("selectLanguage").disabled = true;
+            document.getElementById("authName").disabled = true;
+            document.getElementById("authPass").disabled = true;
+            document.getElementById("btnAuth").disabled = true;
 
             const board = getLeaderboard();
             ghostRunData = (board.length > 0 && board[0].runData) ? board[0].runData : null;
@@ -693,9 +764,13 @@
             clearTimeout(targetTimeout); clearInterval(timerInterval);
             recordEvent('end', {});
 
+            // 解鎖大廳面板
             document.getElementById("btnStart").disabled = false;
             document.getElementById("selectDifficulty").disabled = false;
             document.getElementById("selectLanguage").disabled = false;
+            document.getElementById("authName").disabled = false;
+            document.getElementById("authPass").disabled = false;
+            document.getElementById("btnAuth").disabled = false;
 
             const dict = i18n[getLang()];
             const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
@@ -708,25 +783,15 @@
             
             let desc = `${dict.descFinalScore}：${score}\n${dict.descProgress}：${level} ${dict.descLevel}\n${dict.descTimeUsed}：${timeUsed} ${dict.descSec}\n${dict.descAcc}：${accuracy}%`;
             
-            document.getElementById("modal-title").innerText = title;
-            document.getElementById("playerName").placeholder = dict.placeholderName;
-            document.getElementById("playerPassword").placeholder = dict.placeholderPass;
-            document.getElementById("modalBtn").innerText = dict.btnConfirm;
-            document.getElementById("auth-hint").innerText = ""; 
-
-            // 帶入上一次成功寫入的名字，讓熟客不用重複打名字
-            if (currentUser !== "Guest") {
-                document.getElementById("playerName").value = currentUser;
-            }
-
+            // 🎯 超流暢自動判定：如果打破歷史紀錄，直接用當前登入的名字（若是Guest則用Guest）存入，不開視窗卡人
             if (checkHighScore(score)) {
                 desc += dict.descNewRecord;
-                document.getElementById("name-input-area").style.display = "block";
+                saveHighScore(currentUser, score, currentRunData);
             } else {
-                desc += dict.noRecord || "";
-                document.getElementById("name-input-area").style.display = "none";
+                desc += dict.descNoRecord;
             }
             
+            document.getElementById("modal-title").innerText = title;
             document.getElementById("modal-desc").innerText = desc;
             document.getElementById("modal-overlay").style.display = "flex";
             
@@ -734,50 +799,8 @@
             updateLobby(); 
         }
 
-        // 🔐 核心驗證與儲存分流邏輯
-        function processModalAction() {
-            const dict = i18n[getLang()];
-            const isInputVisible = (document.getElementById("name-input-area").style.display === "block");
-            
-            if (!isInputVisible) {
-                // 如果沒破紀錄，直接關閉視窗
-                document.getElementById("modal-overlay").style.display = "none";
-                showLeaderboard();
-                return;
-            }
-
-            const name = document.getElementById("playerName").value.trim();
-            const password = document.getElementById("playerPassword").value.trim();
-
-            if (!name || !password) {
-                document.getElementById("auth-hint").innerText = dict.errEmpty;
-                return;
-            }
-
-            // 讀取本地帳號庫
-            let accounts = JSON.parse(localStorage.getItem("aim_accounts") || "{}");
-
-            if (accounts[name]) {
-                // 帳號存在 -> 驗證密碼
-                if (accounts[name] !== password) {
-                    document.getElementById("auth-hint").innerText = dict.errWrongPass;
-                    return;
-                }
-            } else {
-                // 帳號不存在 -> 自動註冊鎖定
-                accounts[name] = password;
-                localStorage.setItem("aim_accounts", JSON.stringify(accounts));
-            }
-
-            // 驗證通過，寫入資料與代號
-            currentUser = name;
-            saveHighScore(name, score, currentRunData);
-            
-            // 重置輸入框並關閉視窗
-            document.getElementById("playerPassword").value = "";
+        function closeModal() {
             document.getElementById("modal-overlay").style.display = "none";
-            
-            updateUI();
             showLeaderboard();
         }
 
