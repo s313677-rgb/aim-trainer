@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TACTICAL SIMULATOR 3D - SPLIT SCREEN</title>
+    <title>TACTICAL SIMULATOR 3D - GITHUB P2P EDITION</title>
+    <!-- 引入 PeerJS：實現 GitHub 靜態網頁免伺服器 P2P 連線 -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #080810;
+            background-color: #06060c;
             color: #ecf0f1;
             display: flex;
             flex-direction: column;
@@ -24,7 +26,7 @@
             text-shadow: 0 0 15px rgba(0, 255, 204, 0.8);
             letter-spacing: 3px;
             font-weight: 800;
-            font-size: 26px;
+            font-size: 24px;
         }
 
         #game-layout {
@@ -35,15 +37,14 @@
             width: 100%;
         }
 
-        /* 頂部控制面板 */
         #control-panel {
-            background-color: #13131c;
-            padding: 12px 20px;
+            background-color: #11111a;
+            padding: 15px 20px;
             border-radius: 12px;
-            border: 1px solid #222533;
+            border: 1px solid #1f2233;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .panel-row {
@@ -67,7 +68,7 @@
         }
 
         select, .panel-input {
-            background-color: #09090f;
+            background-color: #05050a;
             color: #00ffcc;
             border: 1px solid #00ffcc;
             padding: 6px 12px;
@@ -77,12 +78,7 @@
             outline: none;
         }
         
-        .panel-input {
-            width: 110px;
-            color: #fff;
-            border: 1px solid #222533;
-            transition: border 0.2s;
-        }
+        .panel-input { width: 100px; color: #fff; border: 1px solid #222533; text-align: center;}
         .panel-input:focus { border-color: #00ffcc; }
 
         .btn-sm {
@@ -96,16 +92,16 @@
             cursor: pointer;
         }
         .btn-sm:hover { opacity: 0.9; }
+        .btn-net { background: linear-gradient(135deg, #ff9900 0%, #ff5500 100%); color: white; }
 
-        /* 遊戲核心容器 */
         #game-container {
             display: flex;
             gap: 20px;
-            background-color: #13131c;
+            background-color: #11111a;
             padding: 20px;
             border-radius: 20px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.9);
-            border: 1px solid #222533;
+            border: 1px solid #1f2233;
         }
 
         #info-panel {
@@ -117,80 +113,28 @@
         }
 
         .status-box {
-            background-color: #09090f;
+            background-color: #05050a;
             padding: 10px 14px;
             border-radius: 8px;
-            margin-bottom: 8px;
-            font-size: 14px;
+            margin-bottom: 7px;
+            font-size: 13px;
             border-left: 4px solid #00ffcc;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
         }
+        .status-box span { font-weight: bold; color: #f1c40f; font-family: monospace; }
+        .net-status { border-left-color: #ffaa00 !important; }
 
-        .status-box span {
-            font-weight: bold;
-            color: #f1c40f;
-            font-family: 'Courier New', Courier, monospace;
-        }
-
-        .time-warning {
-            color: #ff3838 !important;
-            animation: blink 0.8s infinite;
-        }
-
-        @keyframes blink { 50% { opacity: 0.4; } }
-
-        /* 雙視窗 Canvas 容器 */
         .canvas-wrapper {
             position: relative;
             display: flex;
             gap: 10px;
-            background: #05050a;
+            background: #020205;
             padding: 10px;
             border-radius: 14px;
-            border: 1px solid #1f2230;
+            border: 1px solid #1a1d29;
         }
 
-        canvas {
-            background-color: #020205;
-            border: 2px solid #222533;
-            border-radius: 8px;
-        }
-        
-        /* 專屬即時靶場滑鼠游標 */
+        canvas { background-color: #010103; border: 2px solid #1a1d29; border-radius: 8px; }
         #aimCanvas { cursor: crosshair; }
-
-        #leaderboard {
-            background-color: #09090f;
-            padding: 12px;
-            border-radius: 8px;
-            flex-grow: 1;
-            margin-bottom: 12px;
-            border: 1px solid #1f2230;
-            max-height: 160px;
-            overflow-y: auto;
-        }
-
-        #leaderboard h3 {
-            margin-top: 0;
-            color: #00ffcc;
-            border-bottom: 2px solid rgba(0, 255, 204, 0.2);
-            padding-bottom: 5px;
-            font-size: 14px;
-        }
-
-        ol { padding-left: 20px; margin: 5px 0 0 0; }
-        li { margin-bottom: 6px; font-size: 12px; color: #a2a2c2; }
-
-        .switch-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #09090f;
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid #222533;
-        }
-        .switch-container input { cursor: pointer; width: 15px; height: 15px; }
 
         .btn {
             background: linear-gradient(135deg, #00ffcc 0%, #00b3ff 100%);
@@ -203,372 +147,269 @@
             transition: all 0.2s ease;
             width: 100%;
             font-weight: bold;
-            letter-spacing: 1px;
         }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 255, 204, 0.5); }
-        .btn:disabled { background: #333 !important; color: #666 !important; transform: none !important; box-shadow: none !important; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 255, 204, 0.4); }
+        .btn:disabled { background: #333 !important; color: #666 !important; transform: none !important; }
 
         #modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(4, 4, 8, 0.9); justify-content: center; align-items: center; z-index: 10;
+            background: rgba(4, 4, 8, 0.95); justify-content: center; align-items: center; z-index: 10;
         }
-        #modal { background: #13131c; padding: 35px; border-radius: 16px; text-align: center; border: 2px solid #00ffcc; max-width: 400px; width: 90%; }
-        
-        .user-badge { color: #00ffcc !important; font-weight: bold; }
-        #auth-msg { font-size: 12px; font-weight: bold; margin-left: 5px; }
+        #modal { background: #11111a; padding: 35px; border-radius: 16px; text-align: center; border: 2px solid #00ffcc; max-width: 400px; width: 90%; }
+        .user-badge { color: #00ffcc !important; }
+        .opp-badge { color: #ff9900 !important; }
+        #net-msg { font-size: 13px; font-weight: bold; color: #ffaa00; }
     </style>
 </head>
 <body>
 
-    <h1 id="ui-mainTitle">TACTICAL SIMULATOR：3D 雙視窗影之對決 🎯</h1>
+    <h1>TACTICAL SIMULATOR：GitHub 免費 P2P 線上對決 🌐</h1>
     
     <div id="game-layout">
-        <!-- 頂部控制面板 -->
         <div id="control-panel">
             <div class="panel-row">
                 <div class="panel-section">
-                    <div class="panel-label" id="ui-lblDiff">模擬難度：</div>
-                    <select id="selectDifficulty" onchange="changeDifficulty()">
-                        <option value="children" id="opt-child">兒童模式 (極易)</option>
-                        <option value="easy" id="opt-easy">簡單模式</option>
-                        <option value="normal" id="opt-normal" selected>普通規格</option>
-                        <option value="hard" id="opt-hard">高度困難</option>
-                        <option value="hell" id="opt-hell">地獄限制</option>
-                        <option value="asia" id="opt-asia">亞洲難度 (Meme Extreme)</option>
+                    <div class="panel-label">模擬難度：</div>
+                    <select id="selectDifficulty">
+                        <option value="easy">簡單模式</option>
+                        <option value="normal" selected>普通規格</option>
+                        <option value="hard">高度困難</option>
                     </select>
                 </div>
-
                 <div class="panel-section">
-                    <div class="switch-container">
-                        <input type="checkbox" id="chkGhostMode" checked>
-                        <label for="chkGhostMode" id="ui-lblGhost" style="font-size:13px; font-weight:bold; color:#ff3838; cursor:pointer;">開啟頂尖玩家雙視窗 PK</label>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <div class="panel-label" id="ui-lblLang">語言設置：</div>
-                    <select id="selectLanguage" onchange="switchLanguage()">
-                        <option value="zh-TW" selected>繁體中文</option>
-                        <option value="zh-CN">简体中文</option>
-                        <option value="en">English</option>
-                        <option value="ja">日本語</option>
-                        <option value="ko">한국어</option>
-                    </select>
+                    <span class="panel-label">我的連線 ID：</span>
+                    <span id="my-peer-id" style="color: #00ffcc; font-weight: bold; font-family: monospace;">連線中...</span>
+                    <span id="net-msg">📡 正在初始化 P2P 組件...</span>
                 </div>
             </div>
 
-            <!-- 大廳常駐身分登入區 -->
-            <div class="panel-row" style="border-top: 1px dashed #222533; padding-top: 8px;">
-                <div class="panel-section" id="login-form-area">
-                    <span class="panel-label" id="ui-lblAuthArea">戰術認證：</span>
-                    <input type="text" id="authName" class="panel-input" placeholder="代號" maxlength="8">
-                    <input type="password" id="authPass" class="panel-input" placeholder="密碼">
-                    <button class="btn-sm" id="btnAuth" onclick="lobbyLogin()">登入 / 註冊</button>
-                    <span id="auth-msg"></span>
+            <!-- ⚔ P2P 連線大廳 -->
+            <div class="panel-row" style="border-top: 1px dashed #222533; padding-top: 10px;">
+                <div class="panel-section">
+                    <span class="panel-label" style="color: #ffaa00;">好友開房：</span>
+                    <button class="btn-sm btn-net" onclick="createRoom()">生成房號(分享給朋友)</button>
+                    <input type="text" id="joinIdInput" class="panel-input" placeholder="輸入朋友房號" maxlength="5">
+                    <button class="btn-sm" style="background: #ffaa00;" onclick="joinRoom()">進房 PK</button>
+                </div>
+                <div class="panel-section">
+                    <span class="panel-label" style="color: #00b3ff;">大廳匹配：</span>
+                    <button class="btn-sm" style="background: linear-gradient(135deg, #00b3ff 0%, #8800ff 100%); color:white;" id="btnMatch" onclick="startMatchmaking()">線上隨機匹配</button>
                 </div>
             </div>
         </div>
 
-        <!-- 遊戲主畫面 -->
         <div id="game-container">
-            <!-- ⚔ 雙視窗分割區 -->
             <div class="canvas-wrapper">
-                <!-- 左側：榜首錄影畫面 -->
                 <canvas id="ghostCanvas" width="380" height="450"></canvas>
-                <!-- 右側：玩家即時挑戰畫面 -->
                 <canvas id="aimCanvas" width="380" height="450"></canvas>
             </div>
 
             <div id="info-panel">
                 <div>
-                    <div class="status-box"><span id="ui-boxUser">目前身分</span>: <span id="lblUser" class="user-badge">Guest</span></div>
-                    <div class="status-box"><span id="ui-boxLevel">目前關卡</span>: <span id="lblLevel">1</span> / 5</div>
-                    <div class="status-box"><span id="ui-boxScore">當前分數</span>: <span id="lblScore">0</span></div>
-                    <div class="status-box"><span id="ui-boxTarget">擊中目標</span>: <span id="lblTarget">0 / 10</span></div>
-                    <div class="status-box"><span id="ui-boxAccuracy">精準度</span>: <span id="lblAccuracy">100</span>%</div>
-                    <div class="status-box"><span id="ui-boxTime">剩餘時間</span>: <span id="lblTime">120.00</span></div>
+                    <div class="status-box"><span class="user-badge">我的狀態</span>: <span id="lblUser">未連線</span></div>
+                    <div class="status-box net-status"><span class="opp-badge">線上對手</span>: <span id="lblOpponent">等待中...</span></div>
+                    <div class="status-box net-status"><span>連線模式</span>: <span id="lblRoomState">單機練習</span></div>
+                    <div class="status-box"><span>目前關卡</span>: <span id="lblLevel">1</span> / 5</div>
+                    <div class="status-box"><span>我的分數</span>: <span id="lblScore">0</span></div>
+                    <div class="status-box net-status"><span class="opp-badge">對手分數</span>: <span id="lblOpponentScore">0</span></div>
+                    <div class="status-box"><span>剩餘時間</span>: <span id="lblTime">120.00</span></div>
                 </div>
-
-                <div id="leaderboard">
-                    <h3>🏆 <span id="ui-boardTitle">本地神射手榜</span> (<span id="lblBoardDiff">普通</span>)</h3>
-                    <ol id="leaderList"><li>暫無資料</li></ol>
-                </div>
-                
-                <button class="btn" id="btnStart" onclick="startGame()">開啟 3D 戰術模擬</button>
+                <button class="btn" id="btnStart" onclick="localPracticeStart()">開啟單機練習</button>
             </div>
         </div>
     </div>
 
-    <!-- 彈出式結算視窗 -->
     <div id="modal-overlay">
         <div id="modal">
-            <h2 id="modal-title" style="color:#00ffcc;">訓練結束</h2>
-            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da; text-align: left; margin-bottom: 15px;"></p>
+            <h2 id="modal-title" style="color:#00ffcc;">戰術結算</h2>
+            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da; margin-bottom: 15px;"></p>
             <button class="btn" onclick="closeModal()">確認</button>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById("aimCanvas");
-        const ctx = canvas.getContext("2d");
-        const ghostCanvas = document.getElementById("ghostCanvas");
-        const gCtx = ghostCanvas.getContext("2d");
+        const canvas = document.getElementById("aimCanvas"); const ctx = canvas.getContext("2d");
+        const ghostCanvas = document.getElementById("ghostCanvas"); const gCtx = ghostCanvas.getContext("2d");
 
-        // 核心狀態變數
-        let score = 0, level = 1, hitsInLevel = 0;
-        let totalClicks = 0, successfulHits = 0;
-        let gameStartTime = 0, timeLeft = 120;
-        let isPlaying = false;
-        let targetTimeout, timerInterval;
-        let currentUser = "Guest"; 
-
-        // 3D 投影變數 (配合新畫布 380x450 修改中心點)
+        // 遊戲核心變數
+        let score = 0, level = 1, hitsInLevel = 0, timeLeft = 120, isPlaying = false, targetTimeout, timerInterval;
         const vpX = 190, vpY = 225, fov = 250;
         let target3D = { x: 0, y: 30, z: 500, baseRadius: 30 };
 
-        // 👻 榜首錄影重播變數
-        let currentRunData = []; 
-        let ghostRunData = null;  
-        let ghostIndex = 0;       
-        let ghostMouse = { x: 190, y: 225 }; 
-        let ghostLaserTimer = 0;
-        let ghostTarget3D = { x: 0, y: 30, z: 500, baseRadius: 30 }; 
-        let ghostScore = 0, ghostLevel = 1, ghostHits = 0; 
-        let ghostActive = false; 
-
-        // 大廳背景動畫
-        let lobbyAnimationId, scanZ = 200, scanDirection = 1, particles = [];
-        for(let i=0; i<20; i++) {
-            particles.push({ x: Math.random()*400-200, y: Math.random()*400-200, z: Math.random()*800+200, speed: Math.random()*2+1 });
-        }
-
-        // 🌐 多國語言字典
-        const i18n = {
-            "zh-TW": {
-                mainTitle: "TACTICAL SIMULATOR：3D 雙視窗影之對決 🎯", diffLabel: "模擬難度：", ghostLabel: "開啟頂尖玩家雙視窗 PK", langLabel: "語言設置：",
-                optChild: "兒童模式 (極易)", optEasy: "簡單模式", optNormal: "普通規格", optHard: "高度困難", optHell: "地獄限制", optAsia: "亞洲難度 (Meme Extreme)",
-                boxUser: "目前身分", boxLevel: "目前關卡", boxScore: "當前分數", boxTarget: "擊中目標", boxAccuracy: "精準度", boxTime: "剩餘時間",
-                boardTitle: "本地神射手榜", btnStart: "開啟 3D 戰術模擬", noData: "暫無資料", ghostTag: "第一名影子",
-                lobbyReady: "[ 系統就緒 : 大廳待機中 ]", lobbyDesc: "調整設定後，解鎖靶場",
-                titleWin: "⚡ 特訓成功通關！", titleTimeout: "⏰ 限制時間截止！", titleAsiaWin: "🥢 💥 獲得亞洲神射手絕對認證！",
-                descFinalScore: "最終得分", descProgress: "通關進度", descLevel: "關", descTimeUsed: "總計耗時", descSec: "秒", descAcc: "射擊精準度",
-                descNewRecord: "\n\n🎉 恭喜打破排行紀錄！已自動為你綁定更新！", descNoRecord: "\n\n未能打破第一名的影子紀錄，請繼續加油！",
-                placeholderName: "代號", placeholderPass: "密碼", btnConfirm: "確認", lblAuthArea: "戰術認證：", btnAuth: "登入 / 註冊",
-                msgSuccessReg: " 秒速註冊並登入成功！", msgSuccessLog: " 驗證成功，歡迎回來！", msgWrongPass: "❌ 密碼錯誤！此名字已被占有", msgEmpty: "❌ 請填寫代號與密碼",
-                diffNames: { children:"兒童", easy:"簡單", normal:"普通", hard:"困難", hell:"地獄", asia:"亞洲" }
-            },
-            "zh-CN": {
-                mainTitle: "TACTICAL SIMULATOR：3D 双视窗影之对决 🎯", diffLabel: "模拟难度：", ghostLabel: "开启顶尖玩家双视窗 PK", langLabel: "语言设置：",
-                optChild: "儿童模式 (极易)", optEasy: "简单模式", optNormal: "普通规格", optHard: "高度困难", optHell: "地狱限制", optAsia: "亚洲难度 (Meme Extreme)",
-                boxUser: "当前身份", boxLevel: "目前关卡", boxScore: "当前分数", boxTarget: "击中目标", boxAccuracy: "精准度", boxTime: "剩余时间",
-                boardTitle: "本地神射手榜", btnStart: "开启 3D 战术模拟", noData: "暂无数据", ghostTag: "第一名影子",
-                lobbyReady: "[ 系统就绪 : 大厅待机中 ]", lobbyDesc: "调整设定后，解锁靶场",
-                titleWin: "⚡ 特训成功通关！", titleTimeout: "⏰ 限制时间截止！", titleAsiaWin: "🥢 💥 获得亚洲神射手绝对认证！",
-                descFinalScore: "最终得分", descProgress: "通关进度", descLevel: "关", descTimeUsed: "总计耗时", descSec: "秒", descAcc: "射击精准度",
-                descNewRecord: "\n\n🎉 恭喜打破排行纪录！已自动为您绑定更新！", descNoRecord: "\n\n未能打破第一名的影子纪录，请继续加油！",
-                placeholderName: "代号", placeholderPass: "密码", btnConfirm: "确认", lblAuthArea: "战术认证：", btnAuth: "登录 / 注册",
-                msgSuccessReg: " 秒速注册并登录成功！", msgSuccessLog: " 验证成功，欢迎回来！", msgWrongPass: "❌ 密码错误！此名字已被占有", msgEmpty: "❌ 请填写代号与密码",
-                diffNames: { children:"儿童", easy:"简单", normal:"普通", hard:"困难", hell:"地狱", asia:"亚洲" }
-            }
-        };
-
-        function getLang() { return document.getElementById("selectLanguage").value || "zh-TW"; }
-
-        function switchLanguage() {
-            const lang = getLang();
-            const dict = i18n[lang] || i18n["zh-TW"];
-
-            document.getElementById("ui-mainTitle").innerText = dict.mainTitle;
-            document.getElementById("ui-lblDiff").innerText = dict.diffLabel;
-            document.getElementById("ui-lblGhost").innerText = dict.ghostLabel;
-            document.getElementById("ui-lblLang").innerText = dict.langLabel;
-            document.getElementById("ui-lblAuthArea").innerText = dict.lblAuthArea;
-            document.getElementById("btnAuth").innerText = dict.btnAuth;
-            
-            document.getElementById("authName").placeholder = dict.placeholderName;
-            document.getElementById("authPass").placeholder = dict.placeholderPass;
-            
-            document.getElementById("opt-child").innerText = dict.optChild;
-            document.getElementById("opt-easy").innerText = dict.optEasy;
-            document.getElementById("opt-normal").innerText = dict.optNormal;
-            document.getElementById("opt-hard").innerText = dict.optHard;
-            document.getElementById("opt-hell").innerText = dict.optHell;
-            document.getElementById("opt-asia").innerText = dict.optAsia;
-
-            document.getElementById("ui-boxUser").innerText = dict.boxUser;
-            document.getElementById("ui-boxLevel").innerText = dict.boxLevel;
-            document.getElementById("ui-boxScore").innerText = dict.boxScore;
-            document.getElementById("ui-boxTarget").innerText = dict.boxTarget;
-            document.getElementById("ui-boxAccuracy").innerText = dict.boxAccuracy;
-            document.getElementById("ui-boxTime").innerText = dict.boxTime;
-            document.getElementById("ui-boardTitle").innerText = dict.boardTitle;
-            document.getElementById("btnStart").innerText = dict.btnStart;
-
-            const diff = getDiff();
-            document.getElementById("lblBoardDiff").innerText = dict.diffNames[diff];
-
-            showLeaderboard();
-        }
-
-        function lobbyLogin() {
-            const dict = i18n[getLang()];
-            const name = document.getElementById("authName").value.trim();
-            const pass = document.getElementById("authPass").value.trim();
-            const msgEl = document.getElementById("auth-msg");
-
-            if (!name || !pass) {
-                msgEl.style.color = "#ff3838";
-                msgEl.innerText = dict.msgEmpty;
-                return;
-            }
-
-            let accounts = JSON.parse(localStorage.getItem("aim_accounts") || "{}");
-
-            if (accounts[name]) {
-                if (accounts[name] !== pass) {
-                    msgEl.style.color = "#ff3838";
-                    msgEl.innerText = dict.msgWrongPass;
-                    return;
-                }
-                msgEl.style.color = "#00ffcc";
-                msgEl.innerText = "✔" + dict.msgSuccessLog;
-            } else {
-                accounts[name] = pass;
-                localStorage.setItem("aim_accounts", JSON.stringify(accounts));
-                msgEl.style.color = "#f1c40f";
-                msgEl.innerText = "✔" + dict.msgSuccessReg;
-            }
-
-            currentUser = name;
-            document.getElementById("lblUser").innerText = currentUser;
-            document.getElementById("authPass").value = ""; 
-        }
+        // 🌐 P2P 連線核心變數
+        let peer = null;
+        let conn = null; // P2P 資料傳輸通道
+        let myId = "";
+        let isMultiplayer = false;
+        let oppScore = 0, oppLevel = 1;
+        let oppTarget3D = { x: 0, y: 30, z: 500, baseRadius: 30 };
+        let oppLaserTimer = 0, oppMouse = { x: 190, y: 225 };
 
         const difficultySettings = {
-            children: { name: "children", gameTime: 180, reqHits: [5, 5, 5, 5, 5],    radius: [55, 50, 45, 40, 35], duration: [3000, 2800, 2600, 2400, 2200], missPenalty: 0 },
-            easy:     { name: "easy",     gameTime: 150, reqHits: [8, 8, 10, 10, 10],  radius: [45, 40, 36, 32, 28], duration: [2000, 1800, 1600, 1400, 1200], missPenalty: 2 },
-            normal:   { name: "normal",   gameTime: 120, reqHits: [10, 10, 12, 12, 15], radius: [36, 32, 28, 24, 20], duration: [1500, 1300, 1100, 950,  800],  missPenalty: 5 },
-            hard:     { name: "hard",     gameTime: 90,  reqHits: [12, 12, 15, 15, 20], radius: [28, 25, 22, 19, 16], duration: [1100, 950,  800,  650,  550],  missPenalty: 10 },
-            hell:     { name: "hell",     gameTime: 60,  reqHits: [15, 15, 18, 20, 25], radius: [22, 19, 16, 13, 11], duration: [750,  650,  550,  480,  400],  missPenalty: 20 },
-            asia:     { name: "asia",     gameTime: 45,  reqHits: [15, 18, 20, 22, 30], radius: [16, 13, 10, 8, 6],   duration: [500,  430,  370,  310,  250],  missPenalty: 40 }
+            easy:     { gameTime: 120, reqHits: [8, 8, 10, 10, 10], radius: [45, 40, 36, 32, 28], duration: [2000, 1800, 1600, 1400, 1200], missPenalty: 2 },
+            normal:   { gameTime: 90,  reqHits: [10, 10, 12, 12, 15], radius: [36, 32, 28, 24, 20], duration: [1500, 1300, 1100, 950,  800], missPenalty: 5 },
+            hard:     { gameTime: 60,  reqHits: [12, 12, 15, 15, 20], radius: [28, 25, 22, 19, 16], duration: [1100, 950,  800,  650,  550], missPenalty: 10 }
         };
 
         function getDiff() { return document.getElementById("selectDifficulty").value; }
 
-        function changeDifficulty() {
-            if (isPlaying) return;
-            const diff = getDiff();
-            const dict = i18n[getLang()];
-            document.getElementById("lblBoardDiff").innerText = dict.diffNames[diff];
-            showLeaderboard();
+        // -------------------------------------------------------------
+        // 📡 PeerJS P2P 連線引擎
+        // -------------------------------------------------------------
+        // 初始化 Peer，隨機產生一個 5 位數的簡短房號
+        myId = Math.floor(10000 + Math.random() * 89999).toString();
+        peer = new Peer(myId);
+
+        peer.on('open', (id) => {
+            document.getElementById("my-peer-id").innerText = id;
+            document.getElementById("net-msg").innerText = "📡 P2P 雲端就緒，隨時可開房！";
+            document.getElementById("lblUser").innerText = "玩家已就緒";
+        });
+
+        // 被動接收別人的連線邀請 (當朋友輸入你的代碼進房時)
+        peer.on('connection', (incomingConn) => {
+            conn = incomingConn;
+            setupConnection();
+            document.getElementById("lblRoomState").innerText = "好友對決房";
+            document.getElementById("net-msg").innerText = "⚔️ 朋友已進房！對決準備開始...";
+            
+            // 房主發送起始訊號
+            setTimeout(() => {
+                sendNetData("START_GAME", { difficulty: getDiff() });
+                startRealGame();
+            }, 1500);
+        });
+
+        // 1. 自行開房：直接把畫面上的 ID 當成房號告訴朋友
+        function createRoom() {
+            alert(`你的專屬房號是：【 ${myId} 】\n請把這個號碼傳給朋友，等朋友輸入進房即可開戰！`);
         }
 
-        function resetGame() {
+        // 2. 輸入代碼進房
+        function joinRoom() {
+            const peerId = document.getElementById("joinIdInput").value.trim();
+            if(!peerId) { alert("請輸入朋友的5位數房號"); return; }
+            
+            document.getElementById("net-msg").innerText = "正在連線到朋友的房間...";
+            conn = peer.connect(peerId);
+            setupConnection();
+            document.getElementById("lblRoomState").innerText = "好友對決房";
+        }
+
+        // 3. 線上隨機匹配（利用 PeerJS 公共伺服器的小技巧）
+        function startMatchmaking() {
+            document.getElementById("net-msg").innerText = "🔍 正在盲刷全網隨機房間中...";
+            let attempts = 0;
+            
+            function tryConnect() {
+                attempts++;
+                if (attempts > 10) {
+                    document.getElementById("net-msg").innerText = "❌ 暫時沒遇到線上玩家，先建立房間等別人吧！";
+                    createRoom();
+                    return;
+                }
+                // 隨機猜測可能的 5 位數 ID 進行碰撞匹配
+                let guestId = Math.floor(10000 + Math.random() * 89999).toString();
+                if (guestId === myId) { tryConnect(); return; }
+
+                let testConn = peer.connect(guestId);
+                let timeout = setTimeout(() => {
+                    testConn.close();
+                    tryConnect();
+                }, 400); // 快速碰撞
+
+                testConn.on('open', () => {
+                    clearTimeout(timeout);
+                    conn = testConn;
+                    setupConnection();
+                    document.getElementById("lblRoomState").innerText = "隨機匹配對決";
+                    document.getElementById("net-msg").innerText = "⚔️ 成功撞車線上隨機對手！";
+                    setTimeout(() => {
+                        sendNetData("START_GAME", { difficulty: getDiff() });
+                        startRealGame();
+                    }, 1000);
+                });
+            }
+            tryConnect();
+        }
+
+        // 處理連線建立後的數據監聽
+        function setupConnection() {
+            isMultiplayer = true;
+            document.getElementById("lblOpponent").innerText = "線上對手已連接";
+
+            conn.on('data', (data) => {
+                const msg = JSON.parse(data);
+                
+                if (msg.type === "START_GAME") {
+                    document.getElementById("selectDifficulty").value = msg.payload.difficulty;
+                    startRealGame();
+                }
+                if (msg.type === "UPDATE") {
+                    oppScore = msg.payload.score;
+                    oppLevel = msg.payload.level;
+                    oppTarget3D = msg.payload.target3D;
+                    document.getElementById("lblOpponentScore").innerText = oppScore;
+                }
+                if (msg.type === "CLICK") {
+                    oppMouse.x = msg.payload.mx;
+                    oppMouse.y = msg.payload.my;
+                    oppLaserTimer = 6; // 觸發紅外線軌跡
+                }
+                if (msg.type === "SYNC_END") {
+                    endGame(false);
+                }
+            });
+
+            conn.on('close', () => {
+                document.getElementById("net-msg").innerText = "📡 對手斷開連線";
+                if(isPlaying) endGame(false);
+            });
+        }
+
+        function sendNetData(type, payload) {
+            if (conn && conn.open) {
+                conn.send(JSON.stringify({ type: type, payload: payload }));
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 🎮 遊戲核心邏輯
+        // -------------------------------------------------------------
+        function localPracticeStart() {
+            isMultiplayer = false;
+            document.getElementById("lblRoomState").innerText = "單機練習";
+            document.getElementById("lblOpponent").innerText = "無 (單機)";
+            startRealGame();
+        }
+
+        function startRealGame() {
+            if (isPlaying) return;
+            score = 0; level = 1; hitsInLevel = 0; oppScore = 0; oppLevel = 1; oppLaserTimer = 0;
             const cfg = difficultySettings[getDiff()];
-            score = 0; level = 1; hitsInLevel = 0; totalClicks = 0; successfulHits = 0;
             timeLeft = cfg.gameTime;
-            currentRunData = []; 
 
-            // 重設影子狀態
-            ghostScore = 0; ghostLevel = 1; ghostHits = 0;
-            document.getElementById("lblTime").classList.remove("time-warning");
-            updateUI();
-        }
-
-        function startGame() {
-            if (isPlaying) return;
-            cancelAnimationFrame(lobbyAnimationId);
-            resetGame();
-            isPlaying = true;
-
-            // 鎖定設定
             document.getElementById("btnStart").disabled = true;
             document.getElementById("selectDifficulty").disabled = true;
-            document.getElementById("selectLanguage").disabled = true;
-            document.getElementById("authName").disabled = true;
-            document.getElementById("authPass").disabled = true;
-            document.getElementById("btnAuth").disabled = true;
-
-            const board = getLeaderboard();
-            ghostRunData = (board.length > 0 && board[0].runData) ? board[0].runData : null;
-            ghostIndex = 0;
-            ghostLaserTimer = 0;
-            ghostActive = !!(ghostRunData && document.getElementById("chkGhostMode").checked);
 
             gameStartTime = performance.now();
-            recordEvent('start', {});
+            isPlaying = true;
 
-            const maxDuration = difficultySettings[getDiff()].gameTime;
             timerInterval = setInterval(() => {
                 const elapsed = (performance.now() - gameStartTime) / 1000;
-                timeLeft = (maxDuration - elapsed).toFixed(2);
-                if (timeLeft <= 15) document.getElementById("lblTime").classList.add("time-warning");
+                timeLeft = (cfg.gameTime - elapsed).toFixed(2);
                 if (timeLeft <= 0) {
                     timeLeft = "0.00";
-                    endGame(false, true);
+                    sendNetData("SYNC_END", {});
+                    endGame();
                     return;
                 }
                 document.getElementById("lblTime").innerText = timeLeft;
-                
-                // 🔄 左視窗影子的數據時間軸步進解析
-                if (ghostActive) {
-                    const currentMillis = performance.now() - gameStartTime;
-                    while (ghostIndex < ghostRunData.length && ghostRunData[ghostIndex].time <= currentMillis) {
-                        const gEvent = ghostRunData[ghostIndex];
-                        if (gEvent.type === 'spawn') {
-                            ghostTarget3D.x = gEvent.x;
-                            ghostTarget3D.y = gEvent.y;
-                            ghostTarget3D.z = gEvent.z;
-                            ghostTarget3D.baseRadius = difficultySettings[getDiff()].radius[ghostLevel - 1];
-                            
-                            // 影子移動到新生靶心上
-                            const proj = project(ghostTarget3D.x, ghostTarget3D.y, ghostTarget3D.z);
-                            ghostMouse.x = proj.x;
-                            ghostMouse.y = proj.y;
-                        } 
-                        else if (gEvent.type === 'hit') {
-                            ghostMouse.x = gEvent.mx;
-                            ghostMouse.y = gEvent.my;
-                            ghostLaserTimer = 6; // 觸發紅雷射閃爍
-                            ghostHits++;
-                            
-                            let distanceBonus = Math.round((ghostTarget3D.z - 200) / 15);
-                            let basePoints = ghostLevel * 10;
-                            if (getDiff() === 'asia') basePoints *= 3;
-                            if (getDiff() === 'hell') basePoints *= 2;
-                            ghostScore += basePoints + Math.max(0, distanceBonus);
-
-                            const req = difficultySettings[getDiff()].reqHits[ghostLevel - 1];
-                            if (ghostHits >= req) {
-                                if (ghostLevel < 5) { ghostLevel++; ghostHits = 0; }
-                            }
-                        } 
-                        else if (gEvent.type === 'click') {
-                            ghostMouse.x = gEvent.mx;
-                            ghostMouse.y = gEvent.my;
-                            ghostLaserTimer = 6; 
-                            ghostScore = Math.max(0, ghostScore - difficultySettings[getDiff()].missPenalty);
-                        }
-                        ghostIndex++;
-                    }
-                }
-
-                // 即時渲染雙視窗
                 drawCanvas();
                 drawGhostCanvas();
-
             }, 10);
 
             spawnTarget();
-        }
-
-        function recordEvent(type, extra) {
-            if (!isPlaying) return;
-            currentRunData.push({
-                time: performance.now() - gameStartTime,
-                type: type,
-                ...extra
-            });
         }
 
         function spawnTarget() {
@@ -578,323 +419,122 @@
             const cfg = difficultySettings[getDiff()];
             target3D.z = Math.random() * (850 - 220) + 220;
             target3D.baseRadius = cfg.radius[level - 1];
-
-            const maxW = 130; // 配合寬度變窄調整生靶邊界
-            target3D.x = Math.random() * (maxW * 2) - maxW;
+            target3D.x = Math.random() * (130 * 2) - 130;
             target3D.y = Math.random() * (130 - (-30)) + (-30);
 
-            const proj = project(target3D.x, target3D.y, target3D.z);
-            recordEvent('spawn', { x: target3D.x, y: target3D.y, z: target3D.z, projX: proj.x, projY: proj.y });
+            // 實時將新靶心推給對手
+            if(isMultiplayer) syncToOpponent();
 
-            targetTimeout = setTimeout(() => {
-                spawnTarget();
-            }, cfg.duration[level - 1]);
+            targetTimeout = setTimeout(() => { spawnTarget(); }, cfg.duration[level - 1]);
         }
 
-        function project(x, y, z) {
-            const scale = fov / z;
-            return { x: vpX + x * scale, y: vpY + y * scale, scale: scale };
-        }
+        function project(x, y, z) { return { x: vpX + x * (fov / z), y: vpY + y * (fov / z), scale: fov / z }; }
 
-        function updateLobby() {
-            if (isPlaying) return;
-            scanZ += scanDirection * 4;
-            if (scanZ > 950 || scanZ < 200) scanDirection *= -1;
-
-            particles.forEach(p => {
-                p.z -= p.speed;
-                if (p.z < 150) {
-                    p.z = 1000; p.x = Math.random()*300-150; p.y = Math.random()*300-150;
-                }
-            });
-            drawCanvas();
-            drawGhostCanvas();
-            lobbyAnimationId = requestAnimationFrame(updateLobby);
-        }
-
-        // 🎨 渲染底層共通環境（繪製3D隧道）
-        function drawSceneGrid(cCtx, w, h) {
-            cCtx.fillStyle = "#020206";
-            cCtx.fillRect(0, 0, w, h);
-            const size = 160; 
-
-            const farPos = project(0, 0, 1000);
-            const farSize = size * farPos.scale;
-            cCtx.fillStyle = "#000003";
-            cCtx.fillRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
-            cCtx.strokeStyle = "rgba(0, 255, 204, 0.12)";
-            cCtx.strokeRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
-
-            const zStrips = [1000, 750, 560, 420, 310, 230, 170];
-            for (let i = 0; i < zStrips.length - 1; i++) {
-                const zFar = zStrips[i], zNear = zStrips[i + 1];
-                const pFar = project(0, 0, zFar), pNear = project(0, 0, zNear);
-                const sFar = size * pFar.scale, sNear = size * pNear.scale;
-
-                const alpha = (1 - (zNear / 1000)) * 0.25;
-                cCtx.strokeStyle = `rgba(0, 255, 204, ${alpha})`;
-                cCtx.lineWidth = (1 - (zNear / 1000)) * 1.5;
-                cCtx.strokeRect(vpX - sNear, vpY - sNear, sNear * 2, sNear * 2);
-
-                cCtx.beginPath();
-                cCtx.moveTo(vpX - sNear, vpY - sNear); cCtx.lineTo(vpX - sFar, vpY - sFar);
-                cCtx.moveTo(vpX + sNear, vpY - sNear); cCtx.lineTo(vpX + sFar, vpY - sFar);
-                cCtx.moveTo(vpX - sNear, vpY + sNear); cCtx.lineTo(vpX - sFar, vpY + sFar);
-                cCtx.moveTo(vpX + sNear, vpY + sNear); cCtx.lineTo(vpX + sFar, vpY + sFar);
-                cCtx.stroke();
-            }
-        }
-
-        // 🎯 渲染單個3D靶子
-        function drawTargetEntity(cCtx, t3d, colorMain) {
-            const targetProj = project(t3d.x, t3d.y, t3d.z);
-            const r = t3d.baseRadius * targetProj.scale;
-            const size = 160;
-            const floorY = vpY + size * targetProj.scale;
-
-            cCtx.beginPath();
-            cCtx.moveTo(targetProj.x, targetProj.y); cCtx.lineTo(targetProj.x, floorY);
-            cCtx.strokeStyle = "rgba(40, 50, 70, 0.8)";
-            cCtx.lineWidth = Math.max(1.5, 4 * targetProj.scale);
-            cCtx.stroke();
-
-            cCtx.beginPath();
-            cCtx.ellipse(targetProj.x, floorY, r, r * 0.2, 0, 0, Math.PI * 2);
-            cCtx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, (1 - t3d.z / 1000) * 0.5)})`;
-            cCtx.fill();
-
-            let radiusX = r, radiusY = r;
-            cCtx.shadowBlur = Math.max(4, 18 * targetProj.scale); cCtx.shadowColor = colorMain;
-            cCtx.beginPath(); cCtx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, 0, 0, Math.PI * 2); cCtx.fillStyle = colorMain; cCtx.fill();
-            cCtx.shadowBlur = 0;
-            cCtx.beginPath(); cCtx.ellipse(targetProj.x, targetProj.y, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2); cCtx.fillStyle = "#111116"; cCtx.fill();
-            cCtx.beginPath(); cCtx.ellipse(targetProj.x, targetProj.y, radiusX * 0.28, radiusY * 0.28, 0, 0, Math.PI * 2); cCtx.fillStyle = "#ff3838"; cCtx.fill();
-        }
-
-        // 👉 右側視窗：玩家實時畫面
-        function drawCanvas() {
-            drawSceneGrid(ctx, canvas.width, canvas.height);
-            const dict = i18n[getLang()];
-
-            if (!isPlaying) {
-                particles.forEach(p => {
-                    const pt = project(p.x, p.y, p.z);
-                    if (pt.x > 0 && pt.x < canvas.width && pt.y > 0 && pt.y < canvas.height) {
-                        ctx.fillStyle = `rgba(0, 255, 204, ${Math.max(0, (1 - p.z / 1000) * 0.5)})`;
-                        ctx.beginPath(); ctx.arc(pt.x, pt.y, Math.max(0.5, 2 * pt.scale), 0, Math.PI * 2); ctx.fill();
-                    }
-                });
-                ctx.fillStyle = "rgba(0, 255, 204, 0.8)"; ctx.font = "bold 13px monospace"; ctx.textAlign = "center";
-                ctx.fillText("[ 你的實時靶場 ]", vpX, 40);
-                ctx.fillStyle = "rgba(162, 162, 194, 0.6)"; ctx.font = "12px 'Segoe UI'";
-                ctx.fillText(dict.lobbyDesc, vpX, 420);
-            } else {
-                drawTargetEntity(ctx, target3D, "#00ffcc");
-                
-                // 水印與即時局內提示
-                ctx.fillStyle = "rgba(0, 255, 204, 0.2)"; ctx.font = "bold 12px monospace"; ctx.textAlign = "right";
-                ctx.fillText(`YOU Lvl.${level}`, canvas.width - 15, 25);
-            }
-        }
-
-        // 👈 左側視窗：榜首影子重播畫面
-        function drawGhostCanvas() {
-            drawSceneGrid(gCtx, ghostCanvas.width, ghostCanvas.height);
-            const dict = i18n[getLang()];
-
-            if (!isPlaying) {
-                gCtx.fillStyle = "rgba(255, 56, 56, 0.6)"; gCtx.font = "bold 13px monospace"; gCtx.textAlign = "center";
-                gCtx.fillText("[ 榜首紀錄對決視窗 ]", vpX, 40);
-                gCtx.fillStyle = "rgba(162, 162, 194, 0.5)"; gCtx.font = "11px sans-serif";
-                gCtx.fillText(ghostRunData ? "最高紀錄影子載入完畢" : "目前暫無紀錄錄影", vpX, 420);
-            } else {
-                if (ghostActive) {
-                    drawTargetEntity(gCtx, ghostTarget3D, "#ff9900");
-
-                    // 繪製榜首開火軌跡
-                    if (ghostLaserTimer > 0) {
-                        gCtx.beginPath(); gCtx.moveTo(vpX, ghostCanvas.height); gCtx.lineTo(ghostMouse.x, ghostMouse.y);
-                        gCtx.strokeStyle = `rgba(255, 56, 56, ${ghostLaserTimer / 6 * 0.5})`; gCtx.lineWidth = 2; gCtx.stroke();
-                        ghostLaserTimer--;
-                    }
-                    // 繪製準心
-                    gCtx.strokeStyle = "rgba(255, 56, 56, 0.7)"; gCtx.lineWidth = 1.5; gCtx.beginPath();
-                    gCtx.arc(ghostMouse.x, ghostMouse.y, 6, 0, Math.PI * 2);
-                    gCtx.moveTo(ghostMouse.x - 12, ghostMouse.y); gCtx.lineTo(ghostMouse.x + 12, ghostMouse.y);
-                    gCtx.moveTo(ghostMouse.x, ghostMouse.y - 12); gCtx.lineTo(ghostMouse.x, ghostMouse.y + 12);
-                    gCtx.stroke();
-
-                    gCtx.fillStyle = "rgba(255, 56, 56, 0.8)"; gCtx.font = "10px monospace"; gCtx.textAlign = "left";
-                    gCtx.fillText(dict.ghostTag, ghostMouse.x + 15, ghostMouse.y + 3);
-
-                    // 影子資料看板
-                    gCtx.fillStyle = "rgba(255, 56, 56, 0.3)"; gCtx.font = "bold 12px monospace"; gCtx.textAlign = "left";
-                    gCtx.fillText(`GHOST Lvl.${ghostLevel}  Pts:${ghostScore}`, 15, 25);
-                } else {
-                    gCtx.fillStyle = "rgba(100, 100, 120, 0.5)"; gCtx.font = "12px monospace"; gCtx.textAlign = "center";
-                    gCtx.fillText("NO GHOST GORD RECORD", vpX, vpY);
-                }
-            }
-        }
-
-        // 玩家開火點擊判定
         canvas.addEventListener("mousedown", (e) => {
             if (!isPlaying) return;
-            totalClicks++;
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
             const targetProj = project(target3D.x, target3D.y, target3D.z);
             const r = target3D.baseRadius * targetProj.scale;
-
-            let rx = r, ry = r;
-            const clickDist = ((mouseX - targetProj.x) ** 2) / (rx ** 2) + ((mouseY - targetProj.y) ** 2) / (ry ** 2);
+            const clickDist = ((mouseX - targetProj.x) ** 2) / (r ** 2) + ((mouseY - targetProj.y) ** 2) / (r ** 2);
             const cfg = difficultySettings[getDiff()];
 
             if (clickDist <= 1.0) {
-                successfulHits++; hitsInLevel++;
+                hitsInLevel++;
                 let distanceBonus = Math.round((target3D.z - 200) / 15);
-                let basePoints = level * 10;
-                if (getDiff() === 'asia') basePoints *= 3; 
-                if (getDiff() === 'hell') basePoints *= 2;
+                score += (level * 10) + Math.max(0, distanceBonus); 
 
-                score += basePoints + Math.max(0, distanceBonus); 
-                recordEvent('hit', { mx: mouseX, my: mouseY });
-
-                const req = cfg.reqHits[level - 1];
-                if (hitsInLevel >= req) {
-                    if (level < 5) nextLevel();
-                    else endGame(true, false);
-                } else {
-                    spawnTarget(); 
+                if (hitsInLevel >= cfg.reqHits[level - 1]) {
+                    if (level < 5) { level++; hitsInLevel = 0; } 
+                    else { 
+                        sendNetData("SYNC_END", {});
+                        endGame();
+                        return;
+                    }
                 }
+                spawnTarget();
             } else {
                 score = Math.max(0, score - cfg.missPenalty);
-                recordEvent('click', { mx: mouseX, my: mouseY });
-                drawFlashBorder(); 
+                ctx.strokeStyle = "rgba(255, 56, 56, 0.5)"; ctx.lineWidth = 8; ctx.strokeRect(0, 0, canvas.width, canvas.height);
             }
-            updateUI();
-        });
 
-        function nextLevel() {
-            level++; hitsInLevel = 0; updateUI();
-            ctx.fillStyle = "rgba(0, 255, 204, 0.35)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            isPlaying = false;
-            setTimeout(() => {
-                if(totalClicks > 0 && timeLeft > 0) { isPlaying = true; spawnTarget(); }
-            }, 300);
-        }
-
-        function drawFlashBorder() {
-            ctx.strokeStyle = "rgba(255, 56, 56, 0.5)"; ctx.lineWidth = 8; ctx.strokeRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function updateUI() {
-            const cfg = difficultySettings[getDiff()];
-            const req = cfg ? cfg.reqHits[level - 1] : 0;
+            if(isMultiplayer) {
+                sendNetData("CLICK", { mx: mouseX, my: mouseY });
+                syncToOpponent();
+            }
             document.getElementById("lblLevel").innerText = level;
             document.getElementById("lblScore").innerText = score;
-            document.getElementById("lblTarget").innerText = `${hitsInLevel} / ${req}`;
-            const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
-            document.getElementById("lblAccuracy").innerText = accuracy;
-            document.getElementById("lblUser").innerText = currentUser;
+        });
+
+        function syncToOpponent() {
+            sendNetData("UPDATE", { score: score, level: level, target3D: target3D });
         }
 
-        function endGame(isWin, isTimeOut = false) {
+        function endGame() {
+            if(!isPlaying) return;
             isPlaying = false;
             clearTimeout(targetTimeout); clearInterval(timerInterval);
-            recordEvent('end', {});
 
-            // 解鎖
             document.getElementById("btnStart").disabled = false;
             document.getElementById("selectDifficulty").disabled = false;
-            document.getElementById("selectLanguage").disabled = false;
-            document.getElementById("authName").disabled = false;
-            document.getElementById("authPass").disabled = false;
-            document.getElementById("btnAuth").disabled = false;
 
-            const dict = i18n[getLang()];
-            const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
+            let resultTitle = "🎯 戰術特訓結束";
+            let resultDesc = `【我的最終分數】: ${score} 分 (Level ${level})\n`;
             
-            let title = isWin ? dict.titleWin : dict.titleTimeout;
-            if (isWin && getDiff() === 'asia') title = dict.titleAsiaWin;
-
-            const maxDuration = difficultySettings[getDiff()].gameTime;
-            const timeUsed = (maxDuration - parseFloat(timeLeft)).toFixed(2);
-            
-            let desc = `${dict.descFinalScore}：${score}\n${dict.descProgress}：${level} ${dict.descLevel}\n${dict.descTimeUsed}：${timeUsed} ${dict.descSec}\n${dict.descAcc}：${accuracy}%`;
-            
-            if (checkHighScore(score)) {
-                desc += dict.descNewRecord;
-                saveHighScore(currentUser, score, currentRunData);
-            } else {
-                desc += dict.descNoRecord;
+            if(isMultiplayer) {
+                resultTitle = (score > oppScore) ? "👑 贏得線上對決勝利！" : (score < oppScore ? "❌ 線上對決落敗..." : "🤝 雙方平手！");
+                resultDesc += `【對手的分數】: ${oppScore} 分\n\n`;
+                resultDesc += (score > oppScore) ? "槍法精準！你成功壓制了對手！" : "對手的手速更快，再接再厲！";
             }
-            
-            document.getElementById("modal-title").innerText = title;
-            document.getElementById("modal-desc").innerText = desc;
+
+            document.getElementById("modal-title").innerText = resultTitle;
+            document.getElementById("modal-desc").innerText = resultDesc;
             document.getElementById("modal-overlay").style.display = "flex";
-            
-            target3D = { x: 0, y: 30, z: 500, baseRadius: 30 };
-            updateLobby(); 
         }
 
-        function closeModal() {
-            document.getElementById("modal-overlay").style.display = "none";
-            showLeaderboard();
+        function closeModal() { document.getElementById("modal-overlay").style.display = "none"; }
+
+        // -------------------------------------------------------------
+        // 🎨 3D 繪圖渲染引擎
+        // -------------------------------------------------------------
+        function drawSceneGrid(cCtx, w, h) {
+            cCtx.fillStyle = "#020205"; cCtx.fillRect(0, 0, w, h);
+            const farPos = project(0, 0, 1000); const farSize = 160 * farPos.scale;
+            cCtx.fillStyle = "#000002"; cCtx.fillRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
+            cCtx.strokeStyle = "rgba(0, 255, 204, 0.1)"; cCtx.strokeRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
         }
 
-        function getLeaderboard() {
-            const diff = getDiff();
-            const board = localStorage.getItem(`aim_leaderboard_auth_${diff}`);
-            return board ? JSON.parse(board) : [];
+        function drawTargetEntity(cCtx, t3d, colorMain) {
+            const proj = project(t3d.x, t3d.y, t3d.z); const r = t3d.baseRadius * proj.scale;
+            cCtx.beginPath(); cCtx.moveTo(proj.x, proj.y); cCtx.lineTo(proj.x, vpY + 160 * proj.scale);
+            cCtx.strokeStyle = "rgba(40, 50, 70, 0.5)"; cCtx.lineWidth = Math.max(1, 3 * proj.scale); cCtx.stroke();
+            cCtx.beginPath(); cCtx.arc(proj.x, proj.y, r, 0, Math.PI * 2); cCtx.fillStyle = colorMain; cCtx.fill();
+            cCtx.beginPath(); cCtx.arc(proj.x, proj.y, r * 0.6, 0, Math.PI * 2); cCtx.fillStyle = "#0a0a10"; cCtx.fill();
+            cCtx.beginPath(); cCtx.arc(proj.x, proj.y, r * 0.25, 0, Math.PI * 2); cCtx.fillStyle = "#ff3838"; cCtx.fill();
         }
 
-        function checkHighScore(currentScore) {
-            if (currentScore === 0) return false;
-            const board = getLeaderboard();
-            if (board.length < 5) return true;
-            return currentScore > board[board.length - 1].score;
+        function drawCanvas() {
+            drawSceneGrid(ctx, canvas.width, canvas.height);
+            if (isPlaying) drawTargetEntity(ctx, target3D, "#00ffcc");
         }
 
-        function saveHighScore(name, currentScore, runData) {
-            const diff = getDiff();
-            let board = getLeaderboard();
-            const isNewNumberOne = board.length === 0 || currentScore > board[0].score;
-            
-            board.push({
-                name: name,
-                score: currentScore,
-                date: new Date().toLocaleDateString(),
-                runData: isNewNumberOne ? runData : null 
-            });
-            board.sort((a, b) => b.score - a.score);
-            for (let i = 0; i < board.length; i++) {
-                if (i > 0) board[i].runData = null; 
+        function drawGhostCanvas() {
+            drawSceneGrid(gCtx, ghostCanvas.width, ghostCanvas.height);
+            if (isPlaying && isMultiplayer) {
+                drawTargetEntity(gCtx, oppTarget3D, "#ffaa00");
+                if (oppLaserTimer > 0) {
+                    gCtx.beginPath(); gCtx.moveTo(vpX, ghostCanvas.height); gCtx.lineTo(oppMouse.x, oppMouse.y);
+                    gCtx.strokeStyle = `rgba(255, 153, 0, ${oppLaserTimer / 6})`; gCtx.lineWidth = 2; gCtx.stroke();
+                    oppLaserTimer--;
+                }
+                gCtx.strokeStyle = "rgba(255, 153, 0, 0.7)"; gCtx.lineWidth = 1; gCtx.beginPath();
+                gCtx.arc(oppMouse.x, oppMouse.y, 5, 0, Math.PI * 2); gCtx.stroke();
             }
-            board = board.slice(0, 5);
-            localStorage.setItem(`aim_leaderboard_auth_${diff}`, JSON.stringify(board));
         }
 
-        function showLeaderboard() {
-            const board = getLeaderboard();
-            const listEl = document.getElementById("leaderList");
-            listEl.innerHTML = "";
-            if (board.length === 0) {
-                listEl.innerHTML = `<li>暫無資料</li>`;
-                return;
-            }
-            board.forEach((item, index) => {
-                const li = document.createElement("li");
-                const hasGhost = (index === 0 && item.runData) ? " 🎥" : "";
-                li.innerHTML = `<strong>${item.name}</strong> - ${item.score} (${item.date})${hasGhost}`;
-                listEl.appendChild(li);
-            });
-        }
-
-        switchLanguage();
-        updateLobby();
+        setInterval(() => { if(!isPlaying) { drawCanvas(); drawGhostCanvas(); } }, 30);
     </script>
 </body>
 </html>
