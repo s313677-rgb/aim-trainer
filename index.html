@@ -174,7 +174,12 @@
             background: rgba(4, 4, 8, 0.9); justify-content: center; align-items: center; z-index: 10;
         }
         #modal { background: #13131c; padding: 35px; border-radius: 16px; text-align: center; border: 2px solid #00ffcc; max-width: 400px; width: 90%; }
-        #modal input { padding: 12px; width: 80%; margin: 18px 0; border: 1px solid #222533; background: #09090f; color: #fff; border-radius: 6px; text-align: center; font-size: 15px; }
+        #modal input { padding: 12px; width: 80%; margin: 8px 0; border: 1px solid #222533; background: #09090f; color: #fff; border-radius: 6px; text-align: center; font-size: 15px; }
+        
+        .user-badge {
+            color: #00ffcc !important;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -219,6 +224,7 @@
 
             <div id="info-panel">
                 <div>
+                    <div class="status-box"><span id="ui-boxUser">目前身分</span>: <span id="lblUser" class="user-badge">Guest</span></div>
                     <div class="status-box"><span id="ui-boxLevel">目前關卡</span>: <span id="lblLevel">1</span> / 5</div>
                     <div class="status-box"><span id="ui-boxScore">當前分數</span>: <span id="lblScore">0</span></div>
                     <div class="status-box"><span id="ui-boxTarget">擊中目標</span>: <span id="lblTarget">0 / 10</span></div>
@@ -239,11 +245,15 @@
     <div id="modal-overlay">
         <div id="modal">
             <h2 id="modal-title" style="color:#00ffcc;">訓練結束</h2>
-            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da; text-align: left;"></p>
-            <div id="name-input-area" style="display:none;">
+            <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da; text-align: left; margin-bottom: 10px;"></p>
+            
+            <div id="name-input-area" style="display:none; border-top: 1px dashed #333; padding-top: 10px;">
                 <input type="text" id="playerName" placeholder="請輸入你的代號" maxlength="8">
+                <input type="password" id="playerPassword" placeholder="設定或輸入密碼防止被篡改">
+                <p id="auth-hint" style="color:#ff3838; font-size:12px; margin: 4px 0 0 0; text-align: center; font-weight: bold;"></p>
             </div>
-            <button class="btn" id="modalBtn" onclick="closeModal()">確認</button>
+            
+            <button class="btn" id="modalBtn" onclick="processModalAction()" style="margin-top:10px;">確認</button>
         </div>
     </div>
 
@@ -257,6 +267,7 @@
         let gameStartTime = 0, timeLeft = 120;
         let isPlaying = false;
         let targetTimeout, timerInterval;
+        let currentUser = "Guest"; // 儲存當前成功解鎖的代號
 
         // 3D 投影
         const vpX = 300, vpY = 300, fov = 300;
@@ -275,62 +286,72 @@
         let ghostMouse = { x: 300, y: 300 }; 
         let ghostLaserTimer = 0;   
 
-        // 🌐 多國語言字典 (i18n)
+        // 🌐 多國語言字典 (i18n) 已同步整合帳密防佔用提示
         const i18n = {
             "zh-TW": {
                 mainTitle: "TACTICAL SIMULATOR：3D 影子競速靶場 🎯", diffLabel: "模擬難度：", ghostLabel: "開啟頂尖玩家影子 PK", langLabel: "語言設置：",
                 optChild: "兒童模式 (極易)", optEasy: "簡單模式", optNormal: "普通規格", optHard: "高度困難", optHell: "地獄限制", optAsia: "亞洲難度 (Meme Extreme)",
-                boxLevel: "目前關卡", boxScore: "當前分數", boxTarget: "擊中目標", boxAccuracy: "精準度", boxTime: "剩餘時間",
+                boxUser: "目前身分", boxLevel: "目前關卡", boxScore: "當前分數", boxTarget: "擊中目標", boxAccuracy: "精準度", boxTime: "剩餘時間",
                 boardTitle: "本地神射手榜", btnStart: "開啟 3D 戰術模擬", noData: "暫無資料", ghostTag: "榜首影子",
                 lobbyReady: "[ 系統就緒 : 大廳待機中 ]", lobbyDesc: "調整上方設定，點擊按鈕解鎖靶場",
                 titleWin: "⚡ 特訓成功通關！", titleTimeout: "⏰ 限制時間截止！", titleAsiaWin: "🥢 💥 獲得亞洲神射手絕對認證！",
                 descFinalScore: "最終得分", descProgress: "通關進度", descLevel: "關", descTimeUsed: "總計耗時", descSec: "秒", descAcc: "射擊精準度",
-                descNewRecord: "\n\n恭喜打破歷史紀錄！你的軌跡將被錄製為影子！請輸入代號：", descNoRecord: "\n\n未能打破第一名的影子紀錄，請繼續加油！",
-                placeholderName: "請輸入你的代號", btnConfirm: "確認", diffNames: { children:"兒童", easy:"簡單", normal:"普通", hard:"困難", hell:"地獄", asia:"亞洲" }
+                descNewRecord: "\n\n恭喜打破排行紀錄！請輸入代號與自訂密碼以防他人占用：", descNoRecord: "\n\n未能打破第一名的影子紀錄，請繼續加油！",
+                placeholderName: "請輸入你的代號", placeholderPass: "設定密碼 (新名字) 或 輸入密碼 (舊玩家)", btnConfirm: "確認", 
+                errWrongPass: "❌ 密碼錯誤！該名稱已被占有，請更換代號或輸入正確密碼！", errEmpty: "❌ 請確實填寫代號與密碼！",
+                diffNames: { children:"兒童", easy:"簡單", normal:"普通", hard:"困難", hell:"地獄", asia:"亞洲" }
             },
             "zh-CN": {
                 mainTitle: "TACTICAL SIMULATOR：3D 影子竞速靶场 🎯", diffLabel: "模拟难度：", ghostLabel: "开启顶尖玩家影子 PK", langLabel: "语言设置：",
                 optChild: "儿童模式 (极易)", optEasy: "简单模式", optNormal: "普通规格", optHard: "高度困难", optHell: "地狱限制", optAsia: "亚洲难度 (Meme Extreme)",
-                boxLevel: "目前关卡", boxScore: "当前分数", boxTarget: "击中目标", boxAccuracy: "精准度", boxTime: "剩余时间",
+                boxUser: "当前身份", boxLevel: "目前关卡", boxScore: "当前分数", boxTarget: "击中目标", boxAccuracy: "精准度", boxTime: "剩余时间",
                 boardTitle: "本地神射手榜", btnStart: "开启 3D 战术模拟", noData: "暂无数据", ghostTag: "榜首影子",
                 lobbyReady: "[ 系统就绪 : 大厅待机中 ]", lobbyDesc: "调整上方设置，点击按钮解锁靶场",
                 titleWin: "⚡ 特训成功通关！", titleTimeout: "⏰ 限制时间截止！", titleAsiaWin: "🥢 💥 获得亚洲神射手绝对认证！",
                 descFinalScore: "最终得分", descProgress: "通关进度", descLevel: "关", descTimeUsed: "总计耗时", descSec: "秒", descAcc: "射击精准度",
-                descNewRecord: "\n\n恭喜打破历史纪录！你的轨迹将被录制为影子！请输入代号：", descNoRecord: "\n\n未能打破第一名的影子纪录，请继续加油！",
-                placeholderName: "请输入您的代号", btnConfirm: "确认", diffNames: { children:"儿童", easy:"简单", normal:"普通", hard:"困难", hell:"地狱", asia:"亚洲" }
+                descNewRecord: "\n\n恭喜打破排行纪录！请输入代号与自订密码以防他人占用：", descNoRecord: "\n\n未能打破第一名的影子纪录，请继续加油！",
+                placeholderName: "请输入您的代号", placeholderPass: "设置密码 (新名字) 或 输入密码 (旧玩家)", btnConfirm: "确认",
+                errWrongPass: "❌ 密码错误！该名称已被占有，请更换代号或输入正确密码！", errEmpty: "❌ 请确实填写代号与密码！",
+                diffNames: { children:"儿童", easy:"简单", normal:"普通", hard:"困难", hell:"地狱", asia:"亚洲" }
             },
             "en": {
                 mainTitle: "TACTICAL SIMULATOR: 3D Ghost Racing Range 🎯", diffLabel: "Difficulty:", ghostLabel: "Enable Top Player Ghost PK", langLabel: "Language:",
                 optChild: "Kids Mode (Very Easy)", optEasy: "Easy Mode", optNormal: "Normal Specification", optHard: "High Difficulty", optHell: "Hell Restriction", optAsia: "Asian Difficulty (Meme Extreme)",
-                boxLevel: "Current Level", boxScore: "Current Score", boxTarget: "Targets Hit", boxAccuracy: "Accuracy", boxTime: "Time Left",
+                boxUser: "Identity", boxLevel: "Current Level", boxScore: "Current Score", boxTarget: "Targets Hit", boxAccuracy: "Accuracy", boxTime: "Time Left",
                 boardTitle: "Local Leaderboard", btnStart: "Start 3D Simulation", noData: "No Record", ghostTag: "Top Ghost",
                 lobbyReady: "[ SYSTEM READY : LOBBY WAITING ]", lobbyDesc: "Adjust settings above, click button to unlock range",
                 titleWin: "⚡ Training Completed Successfully!", titleTimeout: "⏰ Time Limit Reached!", titleAsiaWin: "🥢 💥 ASIAN SHOOTER CERTIFIED!",
                 descFinalScore: "Final Score", descProgress: "Progress", descLevel: "Lvl", descTimeUsed: "Time Elapsed", descSec: "s", descAcc: "Accuracy",
-                descNewRecord: "\n\nCongrats! New Record! Your trail will be saved as a Ghost. Enter your callsign:", descNoRecord: "\n\nFailed to beat the Top 1 Ghost record. Keep trying!",
-                placeholderName: "Enter your name", btnConfirm: "Confirm", diffNames: { children:"Kids", easy:"Easy", normal:"Normal", hard:"Hard", hell:"Hell", asia:"Asian" }
+                descNewRecord: "\n\nCongrats! New Record! Enter your callsign and password to secure your name:", descNoRecord: "\n\nFailed to beat the Top 1 Ghost record. Keep trying!",
+                placeholderName: "Enter your name", placeholderPass: "Set password (New) or Enter password (Returning)", btnConfirm: "Confirm",
+                errWrongPass: "❌ Incorrect Password! Name occupied. Use another name or correct password.", errEmpty: "❌ Callsign and Password cannot be empty!",
+                diffNames: { children:"Kids", easy:"Easy", normal:"Normal", hard:"Hard", hell:"Hell", asia:"Asian" }
             },
             "ja": {
                 mainTitle: "TACTICAL SIMULATOR：3D ゴーストシューティング 🎯", diffLabel: "難易度設定：", ghostLabel: "トッププレイヤーのゴーストとPK", langLabel: "言語設定：",
                 optChild: "キッズモード (極易)", optEasy: "イージーモード", optNormal: "ノーマル仕様", optHard: "ハイハード", optHell: "ヘルモード", optAsia: "アジア難易度 (Meme Extreme)",
-                boxLevel: "現在ステージ", boxScore: "現在のスコア", boxTarget: "命中目標", boxAccuracy: "命中率", boxTime: "残り時間",
+                boxUser: "ログイン", boxLevel: "現在ステージ", boxScore: "現在のスコア", boxTarget: "命中目標", boxAccuracy: "命中率", boxTime: "残り時間",
                 boardTitle: "射撃順位表", btnStart: "3Dシミュレーション開始", noData: "データなし", ghostTag: "1位のゴースト",
                 lobbyReady: "[ SYSTEM READY : ロビー待機中 ]", lobbyDesc: "上の設定を調整し、ボタンを押して射撃場を開始",
                 titleWin: "⚡ 特訓クリア！おめでとう！", titleTimeout: "⏰ 時間切れ！", titleAsiaWin: "🥢 💥 アジアン・シューター認定獲得！",
                 descFinalScore: "最終スコア", descProgress: "クリア進度", descLevel: "面", descTimeUsed: "所要時間", descSec: "秒", descAcc: "射撃正確度",
-                descNewRecord: "\n\n新記録達成！あなたの軌跡がゴーストとして録画されます！名前を入力：", descNoRecord: "\n\n1位のゴースト記録を破れませんでした。次回頑張りましょう！",
-                placeholderName: "コードネームを入力", btnConfirm: "確認", diffNames: { children:"キッズ", easy:"簡単", normal:"普通", hard:"困難", hell:"地獄", asia:"アジア" }
+                descNewRecord: "\n\nランクイン達成！他の人に使われないよう、名前とパスワードを入力してください：", descNoRecord: "\n\n1位のゴースト記録を破れませんでした。次回頑張りましょう！",
+                placeholderName: "コードネームを入力", placeholderPass: "新規パスワード設定 または パスワード入力", btnConfirm: "確認",
+                errWrongPass: "❌ パスワードが違います！この名前は既に占有されています。", errEmpty: "❌ 名前とパスワードを入力してください！",
+                diffNames: { children:"キッズ", easy:"簡単", normal:"普通", hard:"困難", hell:"地獄", asia:"アジア" }
             },
             "ko": {
                 mainTitle: "TACTICAL SIMULATOR: 3D 고스트 레이싱 사격장 🎯", diffLabel: "시뮬레이션 난이도:", ghostLabel: "최고 플레이어 고스트 PK 활성화", langLabel: "언어 설정:",
                 optChild: "어린이 모드 (매우 쉬움)", optEasy: "쉬움 모드", optNormal: "일반 규격", optHard: "높은 어려움", optHell: "지옥 제한", optAsia: "아시아 난이도 (Meme Extreme)",
-                boxLevel: "현재 스테이지", boxScore: "현재 점수", boxTarget: "적중 목표", boxAccuracy: "명중률", boxTime: "남은 시간",
+                boxUser: "로그인", boxLevel: "현재 스테이지", boxScore: "현재 점수", boxTarget: "적중 목표", boxAccuracy: "명중률", boxTime: "남은 시간",
                 boardTitle: "로컬 명예의 전당", btnStart: "3D 전술 시뮬레이션 시작", noData: "데이터 없음", ghostTag: "1위 고스트",
                 lobbyReady: "[ 시스템 준비 완료 : 로비 대기 중 ]", lobbyDesc: "위의 설정을 조정한 후 버튼을 클릭하여 사격장 진입",
                 titleWin: "⚡ 특훈 성공적 완료!", titleTimeout: "⏰ 제한 시간 종료!", titleAsiaWin: "🥢 💥 아시안 슈터 절대 인증 획득!",
                 descFinalScore: "최종 점수", descProgress: "진행도", descLevel: "단계", descTimeUsed: "총 소요 시간", descSec: "초", descAcc: "사격 명중률",
-                descNewRecord: "\n\n축하합니다! 역사적 신기록! 당신의 궤적이 고스트로 녹화됩니다. 이름을 입력하세요:", descNoRecord: "\n\n1위 고스트의 기록을 깨지 못했습니다. 다시 도전해보세요!",
-                placeholderName: "닉네임을 입력하세요", btnConfirm: "확인", diffNames: { children:"어린이", easy:"쉬움", normal:"일반", hard:"어려움", hell:"지옥", asia:"아시아" }
+                descNewRecord: "\n\n순위권 진입 완료! 다른 사람의 도용을 방지하기 위해 닉네임과 비밀번호를 입력하세요:", descNoRecord: "\n\n1위 고스트의 기록을 깨지 못했습니다. 다시 도전해보세요!",
+                placeholderName: "닉네임을 입력하세요", placeholderPass: "비밀번호 설정 (신규) 또는 비밀번호 입력 (기존)", btnConfirm: "확인",
+                errWrongPass: "❌ 비밀번호가 틀렸습니다! 이미 점유된 이름입니다. 다른 이름을 사용하세요.", errEmpty: "❌ 닉네임과 비밀번호를 모두 입력해야 합니다!",
+                diffNames: { children:"어린이", easy:"쉬움", normal:"일반", hard:"어려움", hell:"지옥", asia:"아시아" }
             }
         };
 
@@ -340,7 +361,6 @@
             const lang = getLang();
             const dict = i18n[lang];
 
-            // 更新靜態 UI
             document.getElementById("ui-mainTitle").innerText = dict.mainTitle;
             document.getElementById("ui-lblDiff").innerText = dict.diffLabel;
             document.getElementById("ui-lblGhost").innerText = dict.ghostLabel;
@@ -353,6 +373,7 @@
             document.getElementById("opt-hell").innerText = dict.optHell;
             document.getElementById("opt-asia").innerText = dict.optAsia;
 
+            document.getElementById("ui-boxUser").innerText = dict.boxUser;
             document.getElementById("ui-boxLevel").innerText = dict.boxLevel;
             document.getElementById("ui-boxScore").innerText = dict.boxScore;
             document.getElementById("ui-boxTarget").innerText = dict.boxTarget;
@@ -361,14 +382,12 @@
             document.getElementById("ui-boardTitle").innerText = dict.boardTitle;
             document.getElementById("btnStart").innerText = dict.btnStart;
 
-            // 更新排行榜顯示的難度中文/英文名
             const diff = getDiff();
             document.getElementById("lblBoardDiff").innerText = dict.diffNames[diff];
 
             showLeaderboard();
         }
 
-        // 六大難度配置參數
         const difficultySettings = {
             children: { name: "children", gameTime: 180, reqHits: [5, 5, 5, 5, 5],    radius: [65, 60, 55, 50, 45], duration: [3000, 2800, 2600, 2400, 2200], missPenalty: 0 },
             easy:     { name: "easy",     gameTime: 150, reqHits: [8, 8, 10, 10, 10],  radius: [50, 46, 42, 38, 35], duration: [2000, 1800, 1600, 1400, 1200], missPenalty: 2 },
@@ -427,7 +446,6 @@
                 }
                 document.getElementById("lblTime").innerText = timeLeft;
                 
-                // 👥 影子播放邏輯
                 if (ghostRunData && document.getElementById("chkGhostMode").checked) {
                     const currentMillis = performance.now() - gameStartTime;
                     while (ghostIndex < ghostRunData.length && ghostRunData[ghostIndex].time <= currentMillis) {
@@ -505,7 +523,6 @@
             const size = 250; 
             const dict = i18n[getLang()];
 
-            // 1. 遠方終點
             const farPos = project(0, 0, 1000);
             const farSize = size * farPos.scale;
             ctx.fillStyle = "#000003";
@@ -513,7 +530,6 @@
             ctx.strokeStyle = "rgba(0, 255, 204, 0.15)";
             ctx.strokeRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
 
-            // 2. 3D 隧道網格
             const zStrips = [1000, 750, 560, 420, 310, 230, 170];
             for (let i = 0; i < zStrips.length - 1; i++) {
                 const zFar = zStrips[i], zNear = zStrips[i + 1];
@@ -530,12 +546,9 @@
                 ctx.moveTo(vpX + sNear, vpY - sNear); ctx.lineTo(vpX + sFar, vpY - sFar);
                 ctx.moveTo(vpX - sNear, vpY + sNear); ctx.lineTo(vpX - sFar, vpY + sFar);
                 ctx.moveTo(vpX + sNear, vpY + sNear); ctx.lineTo(vpX + sFar, vpY + sFar);
-                ctx.moveTo(vpX - sNear * 0.5, vpY + sNear); ctx.lineTo(vpX - sFar * 0.5, vpY + sFar);
-                ctx.moveTo(vpX + sNear * 0.5, vpY + sNear); ctx.lineTo(vpX + sFar * 0.5, vpY + sFar);
                 ctx.stroke();
             }
 
-            // 大廳環境特效
             if (!isPlaying) {
                 particles.forEach(p => {
                     const pt = project(p.x, p.y, p.z);
@@ -549,7 +562,6 @@
                 ctx.strokeRect(vpX - scanSize, vpY - scanSize, scanSize * 2, scanSize * 2);
             }
 
-            // 3. 繪製 3D 實體靶架與投影
             const targetProj = project(target3D.x, target3D.y, target3D.z);
             const r = target3D.baseRadius * targetProj.scale;
             const floorY = vpY + size * targetProj.scale;
@@ -568,20 +580,17 @@
             ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, (1 - target3D.z / 1000) * 0.5)})`;
             ctx.fill();
 
-            // 斜切
             let radiusX = r, radiusY = r;
             const xRatio = target3D.x / size, yRatio = target3D.y / size;
             if (Math.abs(xRatio) > 0.35 && Math.abs(xRatio) > Math.abs(yRatio)) radiusX = r * (1 - Math.abs(xRatio) * 0.35);
             else if (yRatio < -0.35) radiusY = r * (1 - Math.abs(yRatio) * 0.35);
 
-            // 電子靶
             ctx.shadowBlur = Math.max(5, 25 * targetProj.scale); ctx.shadowColor = "#00ffcc";
             ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, 0, 0, Math.PI * 2); ctx.fillStyle = "#00ffcc"; ctx.fill();
             ctx.shadowBlur = 0;
             ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2); ctx.fillStyle = "#111116"; ctx.fill();
             ctx.beginPath(); ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.28, radiusY * 0.28, 0, 0, Math.PI * 2); ctx.fillStyle = "#ff3838"; ctx.fill();
 
-            // 👥 4. 影子玩家
             if (isPlaying && ghostRunData && document.getElementById("chkGhostMode").checked) {
                 if (ghostLaserTimer > 0) {
                     ctx.beginPath(); ctx.moveTo(300, 600); ctx.lineTo(ghostMouse.x, ghostMouse.y);
@@ -597,7 +606,6 @@
                 ctx.fillText(dict.ghostTag, ghostMouse.x + 18, ghostMouse.y + 4);
             }
 
-            // 大廳 HUD 文字
             if (!isPlaying) {
                 ctx.strokeStyle = "rgba(0, 255, 204, 0.4)"; ctx.lineWidth = 2; const len = 25, pad = 15;
                 ctx.beginPath(); ctx.moveTo(pad, pad+len); ctx.lineTo(pad, pad); ctx.lineTo(pad+len, pad); ctx.stroke();
@@ -613,7 +621,6 @@
             }
         }
 
-        // 開槍判定
         canvas.addEventListener("mousedown", (e) => {
             if (!isPlaying) return;
             totalClicks++;
@@ -634,7 +641,6 @@
 
             if (clickDist <= 1.0) {
                 successfulHits++; hitsInLevel++;
-                
                 let distanceBonus = Math.round((target3D.z - 200) / 15);
                 let basePoints = level * 10;
                 if (getDiff() === 'asia') basePoints *= 3; 
@@ -679,6 +685,7 @@
             document.getElementById("lblTarget").innerText = `${hitsInLevel} / ${req}`;
             const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
             document.getElementById("lblAccuracy").innerText = accuracy;
+            document.getElementById("lblUser").innerText = currentUser;
         }
 
         function endGame(isWin, isTimeOut = false) {
@@ -703,13 +710,20 @@
             
             document.getElementById("modal-title").innerText = title;
             document.getElementById("playerName").placeholder = dict.placeholderName;
+            document.getElementById("playerPassword").placeholder = dict.placeholderPass;
             document.getElementById("modalBtn").innerText = dict.btnConfirm;
+            document.getElementById("auth-hint").innerText = ""; 
+
+            // 帶入上一次成功寫入的名字，讓熟客不用重複打名字
+            if (currentUser !== "Guest") {
+                document.getElementById("playerName").value = currentUser;
+            }
 
             if (checkHighScore(score)) {
                 desc += dict.descNewRecord;
                 document.getElementById("name-input-area").style.display = "block";
             } else {
-                desc += dict.descNoRecord;
+                desc += dict.noRecord || "";
                 document.getElementById("name-input-area").style.display = "none";
             }
             
@@ -720,20 +734,56 @@
             updateLobby(); 
         }
 
-        function closeModal() {
-            const nameInput = document.getElementById("playerName");
-            if (document.getElementById("name-input-area").style.display === "block") {
-                const name = nameInput.value.trim() || "Ranger";
-                saveHighScore(name, score, currentRunData); 
-                nameInput.value = "";
+        // 🔐 核心驗證與儲存分流邏輯
+        function processModalAction() {
+            const dict = i18n[getLang()];
+            const isInputVisible = (document.getElementById("name-input-area").style.display === "block");
+            
+            if (!isInputVisible) {
+                // 如果沒破紀錄，直接關閉視窗
+                document.getElementById("modal-overlay").style.display = "none";
+                showLeaderboard();
+                return;
             }
+
+            const name = document.getElementById("playerName").value.trim();
+            const password = document.getElementById("playerPassword").value.trim();
+
+            if (!name || !password) {
+                document.getElementById("auth-hint").innerText = dict.errEmpty;
+                return;
+            }
+
+            // 讀取本地帳號庫
+            let accounts = JSON.parse(localStorage.getItem("aim_accounts") || "{}");
+
+            if (accounts[name]) {
+                // 帳號存在 -> 驗證密碼
+                if (accounts[name] !== password) {
+                    document.getElementById("auth-hint").innerText = dict.errWrongPass;
+                    return;
+                }
+            } else {
+                // 帳號不存在 -> 自動註冊鎖定
+                accounts[name] = password;
+                localStorage.setItem("aim_accounts", JSON.stringify(accounts));
+            }
+
+            // 驗證通過，寫入資料與代號
+            currentUser = name;
+            saveHighScore(name, score, currentRunData);
+            
+            // 重置輸入框並關閉視窗
+            document.getElementById("playerPassword").value = "";
             document.getElementById("modal-overlay").style.display = "none";
+            
+            updateUI();
             showLeaderboard();
         }
 
         function getLeaderboard() {
             const diff = getDiff();
-            const board = localStorage.getItem(`aim_leaderboard_lang_${diff}`);
+            const board = localStorage.getItem(`aim_leaderboard_auth_${diff}`);
             return board ? JSON.parse(board) : [];
         }
 
@@ -760,7 +810,7 @@
                 if (i > 0) board[i].runData = null; 
             }
             board = board.slice(0, 5);
-            localStorage.setItem(`aim_leaderboard_lang_${diff}`, JSON.stringify(board));
+            localStorage.setItem(`aim_leaderboard_auth_${diff}`, JSON.stringify(board));
         }
 
         function showLeaderboard() {
@@ -780,7 +830,6 @@
             });
         }
 
-        // 預設執行語系初始化
         switchLanguage();
         updateLobby();
     </script>
