@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>戰術模擬：超視距 3D 射擊靶場</title>
+    <title>戰術模擬：實體機械 3D 靶場</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -21,7 +21,7 @@
         h1 {
             margin-bottom: 10px;
             color: #00ffcc;
-            text-shadow: 0 0 15px rgba(0, 255, 204, 0.8), 0 0 30px rgba(0, 255, 204, 0.3);
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.8);
             letter-spacing: 3px;
             font-weight: 800;
         }
@@ -32,7 +32,7 @@
             background-color: #13131c;
             padding: 25px;
             border-radius: 20px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(0, 255, 204, 0.05);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
             border: 1px solid #222533;
         }
 
@@ -51,19 +51,16 @@
             font-size: 16px;
             border-left: 5px solid #00ffcc;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
-            border-top: 1px solid #1f2230;
         }
 
         .status-box span {
             font-weight: bold;
             color: #f1c40f;
             font-family: 'Courier New', Courier, monospace;
-            text-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
         }
 
         .time-warning {
             color: #ff3838 !important;
-            text-shadow: 0 0 10px rgba(255, 56, 56, 0.8);
             animation: blink 0.8s infinite;
         }
 
@@ -76,7 +73,6 @@
             border: 3px solid #1f2230;
             border-radius: 12px;
             cursor: crosshair;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
         }
 
         #leaderboard {
@@ -94,7 +90,6 @@
             border-bottom: 2px solid rgba(0, 255, 204, 0.2);
             padding-bottom: 8px;
             font-size: 16px;
-            letter-spacing: 1px;
         }
 
         ol {
@@ -120,17 +115,11 @@
             width: 100%;
             font-weight: bold;
             letter-spacing: 2px;
-            box-shadow: 0 4px 15px rgba(0, 255, 204, 0.3);
         }
 
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 255, 204, 0.5);
-            filter: brightness(1.1);
-        }
-
-        .btn:active {
-            transform: translateY(1px);
         }
 
         #modal-overlay {
@@ -141,7 +130,6 @@
             justify-content: center;
             align-items: center;
             z-index: 10;
-            backdrop-filter: blur(4px);
         }
 
         #modal {
@@ -149,9 +137,6 @@
             padding: 35px;
             border-radius: 16px;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 255, 204, 0.2);
-            max-width: 400px;
-            width: 80%;
             border: 2px solid #00ffcc;
         }
 
@@ -163,12 +148,7 @@
             background: #09090f;
             color: #fff;
             border-radius: 6px;
-            font-size: 16px;
             text-align: center;
-            outline: none;
-        }
-        #modal input:focus {
-            border-color: #00ffcc;
         }
     </style>
 </head>
@@ -195,13 +175,13 @@
                 </ol>
             </div>
             
-            <button class="btn" id="btnStart" onclick="startGame()">開啟 3D 模擬訓練</button>
+            <button class="btn" id="btnStart" onclick="startGame()">開啟 3D 實體模擬</button>
         </div>
     </div>
 
     <div id="modal-overlay">
         <div id="modal">
-            <h2 id="modal-title" style="color:#00ffcc;">訓練結束</h2>
+            <h2 id="modal-title">訓練結束</h2>
             <p id="modal-desc" style="white-space: pre-line; line-height: 1.6; color: #ced4da;"></p>
             <div id="name-input-area" style="display:none;">
                 <input type="text" id="playerName" placeholder="請輸入你的代號" maxlength="8">
@@ -227,14 +207,12 @@
         let timerInterval;
 
         // 3D 投影核心參數
-        // 消失點設在畫布正中央 (300, 300)
         const vpX = 300;
         const vpY = 300;
-        const fov = 300; // 鏡頭焦距
+        const fov = 300; 
 
-        // 靶的世界坐標 (X: -200~200, Y: -200~200, Z: 200~1000 越大越遠)
-        // 大廳預設靶：掛在正中央，中等深度 Z=500
-        let target3D = { x: 0, y: 0, z: 500, baseRadius: 40 };
+        // 3D 世界坐標 (X: -250~250, Y: -250~250, Z: 200~1000)
+        let target3D = { x: 0, y: 50, z: 500, baseRadius: 40 };
 
         const levelSettings = {
             1: { requiredHits: 10, radius: 45, duration: 1500 },
@@ -263,21 +241,15 @@
             document.getElementById("btnStart").disabled = true;
             document.getElementById("btnStart").style.background = "#333";
             document.getElementById("btnStart").style.color = "#666";
-            document.getElementById("btnStart").style.boxShadow = "none";
             
             startTime = performance.now();
             
             timerInterval = setInterval(() => {
                 const elapsed = (performance.now() - startTime) / 1000;
                 timeLeft = (120 - elapsed).toFixed(2);
-
-                if (timeLeft <= 20) {
-                    document.getElementById("lblTime").classList.add("time-warning");
-                }
-
+                if (timeLeft <= 20) document.getElementById("lblTime").classList.add("time-warning");
                 if (timeLeft <= 0) {
                     timeLeft = "0.00";
-                    document.getElementById("lblTime").innerText = timeLeft;
                     endGame(false, true);
                     return;
                 }
@@ -293,15 +265,15 @@
 
             const settings = levelSettings[level];
             
-            // 隨機世界 Z 軸深度 (250 到 900 之間)
-            target3D.z = Math.random() * (900 - 250) + 250;
+            // 隨機生成 Z 軸深度 (220 到 900 之間)
+            target3D.z = Math.random() * (900 - 220) + 220;
             target3D.baseRadius = settings.radius;
 
-            // 根據深度計算世界坐標邊界，防止靶飛出隧道牆壁之外
-            // 隧道的寬高在世界坐標中為 -250 到 250
-            const border = 250 - 40; 
-            target3D.x = Math.random() * (border * 2) - border;
-            target3D.y = Math.random() * (border * 2) - border;
+            // 限制世界坐標防止超出牆壁
+            const maxW = 210;
+            target3D.x = Math.random() * (maxW * 2) - maxW;
+            // 讓靶主要分佈在中間到下半部（模擬站在地面上的打靶）
+            target3D.y = Math.random() * (180 - (-50)) + (-50);
 
             drawCanvas();
 
@@ -310,38 +282,28 @@
             }, settings.duration);
         }
 
-        // 3D 核心：將 3D 世界坐標 (x, y, z) 投影至 2D 畫布坐標
         function project(x, y, z) {
             const scale = fov / z;
-            return {
-                x: vpX + x * scale,
-                y: vpY + y * scale,
-                scale: scale
-            };
+            return { x: vpX + x * scale, y: vpY + y * scale, scale: scale };
         }
 
-        // 繪製具備高度 3D 沉浸感的科幻光影場景
         function drawCanvas() {
-            // 清空畫布
+            // 背景
             ctx.fillStyle = "#020206";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 隧道的四個世界坐標頂點 (正方形管道面)
             const size = 250; 
 
-            // 1. 先畫遠方隧道的「深處終點牆面」(Z = 1000)
+            // 1. 遠方盡頭陰影
             const farPos = project(0, 0, 1000);
             const farSize = size * farPos.scale;
-            ctx.fillStyle = "#000002";
+            ctx.fillStyle = "#000003";
             ctx.fillRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
             ctx.strokeStyle = "rgba(0, 255, 204, 0.15)";
-            ctx.lineWidth = 1;
             ctx.strokeRect(vpX - farSize, vpY - farSize, farSize * 2, farSize * 2);
 
-            // 2. 【3D 透視地磚與牆面網格】由遠到近繪製橫向網格環（符合真實透視比例）
-            // Z 軸採指數或等比遞進，才能做出「近大遠小、遠密近疏」的立體地磚感！
+            // 2. 繪製 3D 網格縱深隧道
             const zStrips = [1000, 750, 560, 420, 310, 230, 170];
-            
             for (let i = 0; i < zStrips.length - 1; i++) {
                 const zFar = zStrips[i];
                 const zNear = zStrips[i + 1];
@@ -352,86 +314,85 @@
                 const sFar = size * pFar.scale;
                 const sNear = size * pNear.scale;
 
-                // 計算景深色彩衰減 (越遠線條越暗，近處線條帶霓虹藍綠色)
                 const alpha = (1 - (zNear / 1000)) * 0.35;
                 ctx.strokeStyle = `rgba(0, 255, 204, ${alpha})`;
                 ctx.lineWidth = (1 - (zNear / 1000)) * 2;
 
-                // 畫出此段區間的環繞框
                 ctx.strokeRect(vpX - sNear, vpY - sNear, sNear * 2, sNear * 2);
 
-                // 畫出地板、天花板與左右牆面的縱向延伸透視線
                 ctx.beginPath();
-                // 左上牆角線
                 ctx.moveTo(vpX - sNear, vpY - sNear); ctx.lineTo(vpX - sFar, vpY - sFar);
-                // 右上牆角線
                 ctx.moveTo(vpX + sNear, vpY - sNear); ctx.lineTo(vpX + sFar, vpY - sFar);
-                // 左下牆角線
                 ctx.moveTo(vpX - sNear, vpY + sNear); ctx.lineTo(vpX - sFar, vpY + sFar);
-                // 右下牆角線
                 ctx.moveTo(vpX + sNear, vpY + sNear); ctx.lineTo(vpX + sFar, vpY + sFar);
                 
-                // 地板與天花板的中線延伸
-                ctx.moveTo(vpX, vpY - sNear); ctx.lineTo(vpX, vpY - sFar);
-                ctx.moveTo(vpX, vpY + sNear); ctx.lineTo(vpX, vpY + sFar);
-                // 兩側牆面中線
-                ctx.moveTo(vpX - sNear, vpY); ctx.lineTo(vpX - sFar, vpY);
-                ctx.moveTo(vpX + sNear, vpY); ctx.lineTo(vpX + sFar, vpY);
+                // 地板格線延伸
+                ctx.moveTo(vpX - sNear * 0.5, vpY + sNear); ctx.lineTo(vpX - sFar * 0.5, vpY + sFar);
+                ctx.moveTo(vpX + sNear * 0.5, vpY + sNear); ctx.lineTo(vpX + sFar * 0.5, vpY + sFar);
                 ctx.stroke();
             }
 
-            // 3. 繪製 3D 空間中的靶子
+            // 3. 【全新核心】繪製 3D 實體靶架與投影
             const targetProj = project(target3D.x, target3D.y, target3D.z);
-            const r = target3D.baseRadius * targetProj.scale; // 2D 投影半徑
+            const r = target3D.baseRadius * targetProj.scale;
 
-            // 【3D 透視斜切靈魂】：如果靶子出現在左牆或右牆，進行圓形扁平化旋轉
-            // 越靠近邊緣，代表在牆壁貼得越緊，拉伸擠壓感越強
-            let radiusX = r;
-            let radiusY = r;
-            let rotation = 0;
+            // 計算目前深度的立體地板 Y 坐標
+            const floorY = vpY + size * targetProj.scale;
 
-            const xRatio = target3D.x / size; // -1 到 1 之間
-            const yRatio = target3D.y / size;
-
-            if (Math.abs(xRatio) > 0.4 && Math.abs(xRatio) > Math.abs(yRatio)) {
-                // 主要貼在左右牆壁上，X 軸半徑因視角變窄（壓扁）
-                radiusX = r * (1 - Math.abs(xRatio) * 0.4);
-            } else if (Math.abs(yRatio) > 0.4) {
-                // 主要貼在天花板或地板上，Y 軸半徑因視角壓扁
-                radiusY = r * (1 - Math.abs(yRatio) * 0.4);
-            }
-
-            // 繪製 3D 落地投影陰影 (與靶子深度同步)
+            // ⚙️ 繪製立體支撐桿（從地板垂直焊接上來支撐靶心）
             ctx.beginPath();
-            const floorY = vpX + size * targetProj.scale; // 當前深度的立體地板位置
-            const shadowOpacity = Math.max(0, (1 - target3D.z / 1000) * 0.4);
-            ctx.ellipse(targetProj.x, Math.min(590, floorY), radiusX, radiusX * 0.2, 0, 0, Math.PI * 2);
+            ctx.moveTo(targetProj.x, targetProj.y);
+            ctx.lineTo(targetProj.x, floorY); 
+            ctx.strokeStyle = "rgba(40, 50, 70, 0.9)";
+            ctx.lineWidth = Math.max(2, 6 * targetProj.scale); // 桿子也會近粗遠細！
+            ctx.stroke();
+
+            // ⚙️ 支撐桿與地板接觸點的 3D 機械底座
+            ctx.fillStyle = "#151922";
+            ctx.fillRect(targetProj.x - r*0.3, floorY - r*0.1, r*0.6, r*0.2);
+
+            // ⚙️ 地板圓形立體投影陰影
+            ctx.beginPath();
+            const shadowOpacity = Math.max(0, (1 - target3D.z / 1000) * 0.5);
+            ctx.ellipse(targetProj.x, floorY, r, r * 0.2, 0, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
             ctx.fill();
 
-            // 繪製 3D 霓虹外圈
-            ctx.shadowBlur = Math.max(5, 20 * targetProj.scale);
+            // ⚙️ 【透視壓扁】根據靶子偏離中心的程度，動態進行 3D 斜切壓扁
+            let radiusX = r;
+            let radiusY = r;
+            const xRatio = target3D.x / size; 
+            const yRatio = target3D.y / size;
+
+            if (Math.abs(xRatio) > 0.35 && Math.abs(xRatio) > Math.abs(yRatio)) {
+                radiusX = r * (1 - Math.abs(xRatio) * 0.35); // 貼近左右牆面時壓扁 X 軸
+            } else if (yRatio < -0.35) {
+                radiusY = r * (1 - Math.abs(yRatio) * 0.35); // 貼近天花板時壓扁 Y 軸
+            }
+
+            // 4. 繪製多層次電子霓虹靶面
+            ctx.shadowBlur = Math.max(5, 25 * targetProj.scale);
             ctx.shadowColor = "#00ffcc";
             ctx.beginPath();
-            ctx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, rotation, 0, Math.PI * 2);
+            ctx.ellipse(targetProj.x, targetProj.y, radiusX, radiusY, 0, 0, Math.PI * 2);
             ctx.fillStyle = "#00ffcc";
             ctx.fill();
-            ctx.shadowBlur = 0; // 關閉光暈
+            ctx.shadowBlur = 0; // 鎖定內圈不模糊
 
-            // 繪製 3D 中圈
+            // 黑色中圈
             ctx.beginPath();
-            ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.6, radiusY * 0.6, rotation, 0, Math.PI * 2);
-            ctx.fillStyle = "#13131c";
+            ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "#111116";
             ctx.fill();
 
-            // 繪製 3D 核心靶心點
+            // 紅色核心點
             ctx.beginPath();
-            ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.25, radiusY * 0.25, rotation, 0, Math.PI * 2);
+            ctx.ellipse(targetProj.x, targetProj.y, radiusX * 0.28, radiusY * 0.28, 0, 0, Math.PI * 2);
             ctx.fillStyle = "#ff3838";
             ctx.fill();
         }
 
-        // 開槍點擊判定
+        // 開槍判定
         canvas.addEventListener("mousedown", (e) => {
             if (!isPlaying) return;
 
@@ -440,45 +401,37 @@
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
-            // 取得當前靶的 2D 投影圓心
             const targetProj = project(target3D.x, target3D.y, target3D.z);
             const r = target3D.baseRadius * targetProj.scale;
 
-            // 使用橢圓方程式精準判定是否有點擊到經過 3D 斜切壓扁後的靶面
             const xRatio = target3D.x / 250;
             const yRatio = target3D.y / 250;
-            let rx = r;
-            let ry = r;
-            if (Math.abs(xRatio) > 0.4 && Math.abs(xRatio) > Math.abs(yRatio)) {
-                rx = r * (1 - Math.abs(xRatio) * 0.4);
-            } else if (Math.abs(yRatio) > 0.4) {
-                ry = r * (1 - Math.abs(yRatio) * 0.4);
+            let rx = r, ry = r;
+            if (Math.abs(xRatio) > 0.35 && Math.abs(xRatio) > Math.abs(yRatio)) {
+                rx = r * (1 - Math.abs(xRatio) * 0.35);
+            } else if (yRatio < -0.35) {
+                ry = r * (1 - Math.abs(yRatio) * 0.35);
             }
 
+            // 橢圓碰撞偵測
             const clickDist = ((mouseX - targetProj.x) ** 2) / (rx ** 2) + ((mouseY - targetProj.y) ** 2) / (ry ** 2);
 
             if (clickDist <= 1.0) {
-                // 🎯 成功擊中
                 successfulHits++;
                 hitsInLevel++;
                 
-                // 【超視距 3D 加分算法】：靶距離越遠（Z 軸越大），加分越高！
-                // 近處加 10 分，最遠處最高可額外獲得 +35 分的距離狙擊加成
-                let distanceBonus = Math.round((target3D.z - 200) / 20);
+                // 3D 超視距狙擊加分
+                let distanceBonus = Math.round((target3D.z - 200) / 18);
                 score += (level * 10) + Math.max(0, distanceBonus); 
 
                 const req = levelSettings[level].requiredHits;
                 if (hitsInLevel >= req) {
-                    if (level < 5) {
-                        nextLevel();
-                    } else {
-                        endGame(true, false); 
-                    }
+                    if (level < 5) nextLevel();
+                    else endGame(true, false);
                 } else {
                     spawnTarget(); 
                 }
             } else {
-                // ❌ 脫靶
                 score = Math.max(0, score - 5);
                 drawFlashBorder(); 
             }
@@ -513,7 +466,6 @@
             document.getElementById("lblLevel").innerText = level;
             document.getElementById("lblScore").innerText = score;
             document.getElementById("lblTarget").innerText = `${hitsInLevel} / ${req}`;
-            
             const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
             document.getElementById("lblAccuracy").innerText = accuracy;
         }
@@ -528,17 +480,13 @@
             document.getElementById("btnStart").style.color = "#05050a";
 
             const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
-            
-            let title = "模擬結束";
-            if (isWin) title = "⚡ 恭喜！頂級 3D 戰術特訓全通關！";
-            else if (isTimeOut) title = "⏰ 時間截止！訓練終止";
-            
+            let title = isWin ? "⚡ 3D 戰術特訓全通關！" : "⏰ 時間截止！";
             const timeUsed = (120 - parseFloat(timeLeft)).toFixed(2);
             let desc = `最終得分：${score} 分\n通關進度：第 ${level} 關\n總計耗時：${timeUsed} 秒\n射擊精準度：${accuracy}%`;
             
             document.getElementById("modal-title").innerText = title;
             if (checkHighScore(score)) {
-                desc += "\n\n超越前人紀錄！請輸入你的神射手代號：";
+                desc += "\n\n成功登入神射手榜！請輸入代號：";
                 document.getElementById("name-input-area").style.display = "block";
             } else {
                 document.getElementById("name-input-area").style.display = "none";
@@ -547,8 +495,7 @@
             document.getElementById("modal-desc").innerText = desc;
             document.getElementById("modal-overlay").style.display = "flex";
             
-            // 回到大廳預設狀態
-            target3D = { x: 0, y: 0, z: 500, baseRadius: 40 };
+            target3D = { x: 0, y: 50, z: 500, baseRadius: 40 };
             drawCanvas(); 
         }
 
@@ -564,7 +511,7 @@
         }
 
         function getLeaderboard() {
-            const board = localStorage.getItem("aim_leaderboard_v3_3d");
+            const board = localStorage.getItem("aim_leaderboard_v4_3d");
             return board ? JSON.parse(board) : [];
         }
 
@@ -580,7 +527,7 @@
             board.push({name: name, score: currentScore, date: new Date().toLocaleDateString()});
             board.sort((a, b) => b.score - a.score);
             board = board.slice(0, 5);
-            localStorage.setItem("aim_leaderboard_v3_3d", JSON.stringify(board));
+            localStorage.setItem("aim_leaderboard_v4_3d", JSON.stringify(board));
         }
 
         function showLeaderboard() {
@@ -598,7 +545,6 @@
             });
         }
 
-        // 初始繪製
         drawCanvas();
         showLeaderboard();
     </script>
