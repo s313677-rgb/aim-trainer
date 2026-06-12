@@ -56,6 +56,16 @@ HTML
             font-family: monospace;
         }
 
+        /* 當時間低於 20 秒時閃爍紅字提示 */
+        .time-warning {
+            color: #ff4757 !important;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+
         /* 遊戲畫布：準心樣式 */
         canvas {
             background-color: #111116;
@@ -157,7 +167,7 @@ HTML
                 <div class="status-box">當前分數: <span id="lblScore">0</span></div>
                 <div class="status-box">擊中目標: <span id="lblTarget">0 / 10</span></div>
                 <div class="status-box">精準度: <span id="lblAccuracy">100</span>%</div>
-                <div class="status-box">時間: <span id="lblTime">0.00</span> 秒</div>
+                <div class="status-box">剩餘時間: <span id="lblTime">120.00</span> 秒</div>
             </div>
 
             <div id="leaderboard">
@@ -193,7 +203,7 @@ HTML
         let totalClicks = 0;
         let successfulHits = 0;
         let startTime = 0;
-        let timeElapsed = 0;
+        let timeLeft = 120; // 總時間 2 分鐘 (120 秒)
         
         let isPlaying = false;
         let targetTimeout;
@@ -218,7 +228,8 @@ HTML
             hitsInLevel = 0;
             totalClicks = 0;
             successfulHits = 0;
-            timeElapsed = 0;
+            timeLeft = 120;
+            document.getElementById("lblTime").classList.remove("time-warning");
             updateUI();
         }
 
@@ -234,10 +245,25 @@ HTML
             
             startTime = performance.now();
             
-            // 啟動精準計時器 (每10毫秒更新一次小數點)
+            // 啟動精準倒數計時器 (每10毫秒更新一次小數點)
             timerInterval = setInterval(() => {
-                timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-                document.getElementById("lblTime").innerText = timeElapsed;
+                const elapsed = (performance.now() - startTime) / 1000;
+                timeLeft = (120 - elapsed).toFixed(2);
+
+                // 低於 20 秒時加上紅色警告特效
+                if (timeLeft <= 20) {
+                    document.getElementById("lblTime").classList.add("time-warning");
+                }
+
+                // 時間到，強制結束遊戲
+                if (timeLeft <= 0) {
+                    timeLeft = "0.00";
+                    document.getElementById("lblTime").innerText = timeLeft;
+                    endGame(false, true); // 觸發時間到結束
+                    return;
+                }
+
+                document.getElementById("lblTime").innerText = timeLeft;
             }, 10);
 
             spawnTarget();
@@ -330,7 +356,7 @@ HTML
                     if (level < 5) {
                         nextLevel();
                     } else {
-                        endGame(true); // 五關全過，破台！
+                        endGame(true, false); // 五關全過，破台！
                     }
                 } else {
                     spawnTarget(); // 繼續下一個靶
@@ -354,10 +380,10 @@ HTML
             ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // 稍微停頓 200ms 後再出新靶，給玩家反應時間
+            // 稍微停頓 300ms 後再出新靶，給玩家反應時間
             isPlaying = false;
             setTimeout(() => {
-                if(totalClicks > 0) { // 確保沒被手動重置
+                if(totalClicks > 0 && timeLeft > 0) { // 確保沒被手動重置且時間未到
                     isPlaying = true;
                     spawnTarget();
                 }
@@ -383,7 +409,7 @@ HTML
         }
 
         // 結束遊戲
-        function endGame(isWin) {
+        function endGame(isWin, isTimeOut = false) {
             isPlaying = false;
             clearTimeout(targetTimeout);
             clearInterval(timerInterval);
@@ -392,9 +418,16 @@ HTML
             document.getElementById("btnStart").style.backgroundColor = "#e74c3c";
 
             const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
-            const title = isWin ? "⚡ 恭喜完成全五關特訓！" : "訓練結束";
             
-            let desc = `最終得分：${score} 分\n總耗時：${timeElapsed} 秒\n整體精準度：${accuracy}%`;
+            let title = "訓練結束";
+            if (isWin) {
+                title = "⚡ 恭喜完成全五關特訓！";
+            } else if (isTimeOut) {
+                title = "⏰ 時間到！訓練終止";
+            }
+            
+            const timeUsed = (120 - parseFloat(timeLeft)).toFixed(2);
+            let desc = `最終得分：${score} 分\n總計通關：第 ${level} 關\n總耗時：${timeUsed} 秒\n整體精準度：${accuracy}%`;
             
             document.getElementById("modal-title").innerText = title;
             
