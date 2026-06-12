@@ -1,4 +1,3 @@
-HTML
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -347,7 +346,7 @@ HTML
                 successfulHits++;
                 hitsInLevel++;
                 
-                // 關卡加分
+                // 關卡加分：關卡越高，單發分數越高
                 score += level * 10; 
 
                 // 檢查是否達到該關卡過關目標
@@ -370,7 +369,7 @@ HTML
             updateUI();
         });
 
-        // 升關邏輯
+        // 升關邏輯 (這裡把時間重置拿掉了，維持全五關共用 120 秒)
         function nextLevel() {
             level++;
             hitsInLevel = 0;
@@ -426,7 +425,7 @@ HTML
             }
             
             const timeUsed = (120 - parseFloat(timeLeft)).toFixed(2);
-            let desc = `最終得分：${score} 分\n總計通關：第 ${level} 關\n總耗時：${timeUsed} 秒\n整體精準度：${accuracy}%`;
+            let desc = `最終得分：${score} 分\n總計通關：第 ${level} 關\n總共耗時：${timeUsed} 秒\n整體精準度：${accuracy}%`;
             
             document.getElementById("modal-title").innerText = title;
             
