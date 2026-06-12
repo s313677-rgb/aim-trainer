@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極限射擊：五關打靶練槍器</title>
+    <title>極限射擊：3D模擬靶場練槍器</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a24;
+            background-color: #0d0d12;
             color: #ecf0f1;
             display: flex;
             flex-direction: column;
@@ -15,22 +15,24 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            user-select: none; /* 防止頻繁點擊時選取到文字 */
+            user-select: none;
         }
 
         h1 {
             margin-bottom: 10px;
-            color: #e74c3c;
-            text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+            color: #00ffcc;
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.6);
+            letter-spacing: 2px;
         }
 
         #game-container {
             display: flex;
             gap: 20px;
-            background-color: #2c2c35;
+            background-color: #1a1a24;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            border: 1px solid #333;
         }
 
         #info-panel {
@@ -41,12 +43,13 @@
         }
 
         .status-box {
-            background-color: #121216;
+            background-color: #09090d;
             padding: 12px 15px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 10px;
             font-size: 16px;
-            border-left: 5px solid #e74c3c;
+            border-left: 5px solid #00ffcc;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
         }
 
         .status-box span {
@@ -55,7 +58,6 @@
             font-family: monospace;
         }
 
-        /* 當時間低於 20 秒時閃爍紅字提示 */
         .time-warning {
             color: #ff4757 !important;
             animation: blink 1s infinite;
@@ -65,28 +67,29 @@
             50% { opacity: 0.5; }
         }
 
-        /* 遊戲畫布：準心樣式 */
         canvas {
-            background-color: #111116;
-            border: 3px solid #444;
-            border-radius: 6px;
-            cursor: crosshair; /* 滑鼠游標變成十字準心 */
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            background-color: #050508;
+            border: 3px solid #00ffcc;
+            border-radius: 8px;
+            cursor: crosshair;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
         }
 
         #leaderboard {
-            background-color: #121216;
+            background-color: #09090d;
             padding: 15px;
-            border-radius: 6px;
+            border-radius: 8px;
             flex-grow: 1;
             margin-bottom: 15px;
+            border: 1px solid #222;
         }
 
         #leaderboard h3 {
             margin-top: 0;
-            color: #3498db;
-            border-bottom: 2px solid #3498db;
+            color: #00ffcc;
+            border-bottom: 2px solid #00ffcc;
             padding-bottom: 5px;
+            font-size: 16px;
         }
 
         ol {
@@ -97,55 +100,55 @@
         li {
             margin-bottom: 6px;
             font-size: 14px;
+            color: #b3b3cc;
         }
 
         .btn {
-            background-color: #e74c3c;
-            color: white;
+            background-color: #00ffcc;
+            color: #0d0d12;
             border: none;
             padding: 12px 20px;
             font-size: 16px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             transition: 0.2s;
             width: 100%;
             font-weight: bold;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
         }
 
         .btn:hover {
-            background-color: #c0392b;
-            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+            background-color: #00ccaa;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.6);
         }
 
-        /* 彈出視窗 */
         #modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             justify-content: center;
             align-items: center;
             z-index: 10;
         }
 
         #modal {
-            background: #2c2c35;
+            background: #1a1a24;
             padding: 30px;
-            border-radius: 10px;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 5px 30px rgba(0, 255, 204, 0.3);
             max-width: 400px;
             width: 80%;
-            border: 1px solid #e74c3c;
+            border: 2px solid #00ffcc;
         }
 
         #modal input {
             padding: 10px;
             width: 80%;
             margin: 15px 0;
-            border: 1px solid #444;
-            background: #121216;
+            border: 1px solid #00ffcc;
+            background: #09090d;
             color: #fff;
             border-radius: 5px;
             font-size: 16px;
@@ -155,7 +158,7 @@
 </head>
 <body>
 
-    <h1>AIM TRAINER：極限打靶 🎯</h1>
+    <h1>TACTICAL SIMULATOR：3D 實境靶場 🎯</h1>
     
     <div id="game-container">
         <canvas id="aimCanvas" width="500" height="500"></canvas>
@@ -170,13 +173,13 @@
             </div>
 
             <div id="leaderboard">
-                <h3>🏆 前五名神射手</h3>
+                <h3>🏆 頂尖神射手排行</h3>
                 <ol id="leaderList">
                     <li>暫無資料</li>
                 </ol>
             </div>
             
-            <button class="btn" id="btnStart" onclick="startGame()">開始訓練</button>
+            <button class="btn" id="btnStart" onclick="startGame()">開啟模擬訓練</button>
         </div>
     </div>
 
@@ -185,7 +188,7 @@
             <h2 id="modal-title">訓練結束</h2>
             <p id="modal-desc" style="white-space: pre-line; line-height: 1.6;"></p>
             <div id="name-input-area" style="display:none;">
-                <input type="text" id="playerName" placeholder="請輸入你的代號 (最多8字)" maxlength="8">
+                <input type="text" id="playerName" placeholder="請輸入你的代號" maxlength="8">
             </div>
             <button class="btn" id="modalBtn" onclick="closeModal()">確認</button>
         </div>
@@ -195,32 +198,29 @@
         const canvas = document.getElementById("aimCanvas");
         const ctx = canvas.getContext("2d");
 
-        // 遊戲核心變數
         let score = 0;
         let level = 1;
         let hitsInLevel = 0;
         let totalClicks = 0;
         let successfulHits = 0;
         let startTime = 0;
-        let timeLeft = 120; // 總時間 2 分鐘 (120 秒)
+        let timeLeft = 120; 
         
         let isPlaying = false;
         let targetTimeout;
         let timerInterval;
 
-        // 當前靶的資訊 (預設在畫布正中央作為主視覺)
-        let target = { x: 250, y: 250, radius: 35 };
+        // 預設靶心位置與立體景深Z軸 (0.1~1.0 越小代表越遠)
+        let target = { x: 250, y: 220, radius: 35, z: 1.0 };
 
-        // 關卡設定：[關卡] = { 目標擊中數, 靶半徑, 靶停留時間(ms) }
         const levelSettings = {
             1: { requiredHits: 10, radius: 25, duration: 1500 },
-            2: { requiredHits: 12, radius: 20, duration: 1200 },
-            3: { requiredHits: 15, radius: 15, duration: 950 },
-            4: { requiredHits: 18, radius: 11, duration: 750 },
-            5: { requiredHits: 20, radius: 7,  duration: 550 } // 地獄級
+            2: { requiredHits: 12, radius: 21, duration: 1200 },
+            3: { requiredHits: 15, radius: 17, duration: 950 },
+            4: { requiredHits: 18, radius: 14, duration: 750 },
+            5: { requiredHits: 20, radius: 10,  duration: 550 }
         };
 
-        // 初始化/重置遊戲
         function resetGame() {
             score = 0;
             level = 1;
@@ -232,149 +232,173 @@
             updateUI();
         }
 
-        // 開始遊戲
         function startGame() {
             if (isPlaying) return;
             resetGame();
             isPlaying = true;
             
-            // 停用按鈕
             document.getElementById("btnStart").disabled = true;
-            document.getElementById("btnStart").style.backgroundColor = "#7f8c8d";
+            document.getElementById("btnStart").style.backgroundColor = "#444";
+            document.getElementById("btnStart").style.color = "#888";
+            document.getElementById("btnStart").style.boxShadow = "none";
             
             startTime = performance.now();
             
-            // 啟動精準倒數計時器 (每10毫秒更新一次小數點)
             timerInterval = setInterval(() => {
                 const elapsed = (performance.now() - startTime) / 1000;
                 timeLeft = (120 - elapsed).toFixed(2);
 
-                // 低於 20 秒時加上紅色警告特效
                 if (timeLeft <= 20) {
                     document.getElementById("lblTime").classList.add("time-warning");
                 }
 
-                // 時間到，強制結束遊戲
                 if (timeLeft <= 0) {
                     timeLeft = "0.00";
                     document.getElementById("lblTime").innerText = timeLeft;
-                    endGame(false, true); // 觸發時間到結束
+                    endGame(false, true);
                     return;
                 }
-
                 document.getElementById("lblTime").innerText = timeLeft;
             }, 10);
 
             spawnTarget();
         }
 
-        // 生成靶
         function spawnTarget() {
             if (!isPlaying) return;
             clearTimeout(targetTimeout);
 
             const settings = levelSettings[level];
             
-            // 隨機生成坐標，確保靶不會切到畫布邊緣
-            const margin = settings.radius + 10;
-            target.x = Math.random() * (canvas.width - margin * 2) + margin;
-            target.y = Math.random() * (canvas.height - margin * 2) + margin;
-            target.radius = settings.radius;
+            // 模擬隨機 3D 景深：隨機生成 Z 軸深度 (關卡越高，靶可能出現得越遠/越小)
+            target.z = Math.random() * (1.0 - 0.4) + 0.4; 
+            
+            // 根據 Z 軸縮放實際可移動半徑，防止靶飄出立體牆面
+            const minX = 100 + (1 - target.z) * 100;
+            const maxX = 400 - (1 - target.z) * 100;
+            const minY = 120 + (1 - target.z) * 80;
+            const maxY = 380 - (1 - target.z) * 80;
+
+            target.x = Math.random() * (maxX - minX) + minX;
+            target.y = Math.random() * (maxY - minY) + minY;
+            
+            // 最終靶半徑受到關卡基礎大小與 3D 深度雙重影響
+            target.radius = settings.radius * target.z;
 
             drawCanvas();
 
-            // 若時間內沒點到，自動刷新到下一個位置
             targetTimeout = setTimeout(() => {
                 spawnTarget();
             }, settings.duration);
         }
 
-        // 繪製畫布與靶心
+        // 繪製強烈 3D 景深場景
         function drawCanvas() {
-            // 清空畫布
-            ctx.fillStyle = "#111116";
+            // 1. 背景基底
+            ctx.fillStyle = "#0a0a10";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 畫網格背景
-            ctx.strokeStyle = "#22222b";
-            ctx.lineWidth = 1;
-            for(let i = 50; i < canvas.width; i += 50) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            // 2. 繪製 3D 走廊消失點（遠方盡頭牆面）
+            ctx.fillStyle = "#030305";
+            ctx.fillRect(150, 150, 200, 200);
+            ctx.strokeStyle = "#1b2a47";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(150, 150, 200, 200);
+
+            // 3. 繪製四條向中心延伸的立體透視線（牆角）
+            ctx.beginPath();
+            ctx.moveTo(0, 0); ctx.lineTo(150, 150);       // 左上
+            ctx.moveTo(500, 0); ctx.lineTo(350, 150);     // 右上
+            ctx.moveTo(0, 500); ctx.lineTo(150, 350);     // 左下
+            ctx.moveTo(500, 500); ctx.lineTo(350, 350);   // 右下
+            ctx.strokeStyle = "#203a5e";
+            ctx.stroke();
+
+            // 4. 繪製兩側牆面與地板的縱深格線 (3D 網格特效)
+            ctx.strokeStyle = "rgba(0, 255, 204, 0.07)";
+            for (let i = 1; i < 5; i++) {
+                let ratio = i / 5;
+                let x1 = 150 * ratio;
+                let x2 = 500 - (150 * ratio);
+                let y1 = 150 * ratio;
+                let y2 = 500 - (150 * ratio);
+
+                // 畫橫向環繞框
+                ctx.strokeRect(x1, y1, 500 - x1 * 2, 500 - y1 * 2);
             }
 
-            // 【核心修復】無論是否在遊戲中，都把靶心畫出來 (非遊戲中畫大廳預設靶)
+            // 5. 繪製打靶目標（帶有景深陰影）
             const r = target.radius;
             
-            // 外圈
+            // 3D 落地投影陰影
+            ctx.beginPath();
+            let shadowY = 350 + (target.y - 150) * 0.4; // 簡單模擬地板投影
+            ctx.ellipse(target.x, Math.min(480, shadowY + 60), r, r * 0.2, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            ctx.fill();
+
+            // 靶心外圈 (霓虹炫光效果)
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#00ffcc";
             ctx.beginPath();
             ctx.arc(target.x, target.y, r, 0, Math.PI * 2);
-            ctx.fillStyle = "#e74c3c";
+            ctx.fillStyle = "#00ffcc";
             ctx.fill();
+            ctx.shadowBlur = 0; // 恢復
 
-            // 中圈
+            // 靶心中圈
             ctx.beginPath();
             ctx.arc(target.x, target.y, r * 0.6, 0, Math.PI * 2);
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = "#1a1a24";
             ctx.fill();
 
-            // 內圈中心點
+            // 靶心內圈中心點
             ctx.beginPath();
             ctx.arc(target.x, target.y, r * 0.25, 0, Math.PI * 2);
-            ctx.fillStyle = "#e74c3c";
+            ctx.fillStyle = "#ff4757";
             ctx.fill();
         }
 
-        // 監聽畫布點擊 (開槍)
         canvas.addEventListener("mousedown", (e) => {
             if (!isPlaying) return;
 
             totalClicks++;
-
-            // 獲取滑鼠在畫布上的精確相對坐標
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-
-            // 計算滑鼠點擊點與靶心的距離
             const distance = Math.sqrt((mouseX - target.x) ** 2 + (mouseY - target.y) ** 2);
 
             if (distance <= target.radius) {
-                // 🎯 擊中靶
                 successfulHits++;
                 hitsInLevel++;
                 
-                // 關卡加分
-                score += level * 10; 
+                // 3D 加分機制：靶出現得越遠（Z越小），點到分數加越多！
+                let bonus = Math.round((1.1 - target.z) * 20);
+                score += (level * 10) + bonus; 
 
-                // 檢查是否達到該關卡過關目標
                 const req = levelSettings[level].requiredHits;
                 if (hitsInLevel >= req) {
                     if (level < 5) {
                         nextLevel();
                     } else {
-                        endGame(true, false); // 五關全過，破台！
+                        endGame(true, false); 
                     }
                 } else {
                     spawnTarget(); 
                 }
             } else {
-                // ❌ 脫靶 (倒扣分數)
                 score = Math.max(0, score - 5);
-                drawFlashBorder(); // 脫靶閃爍紅邊提示
+                drawFlashBorder(); 
             }
-
             updateUI();
         });
 
-        // 升關邏輯 (不重置時間)
         function nextLevel() {
             level++;
             hitsInLevel = 0;
             updateUI();
 
-            // 過關時畫布綠色閃爍特效
-            ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
+            ctx.fillStyle = "rgba(0, 255, 204, 0.3)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             isPlaying = false;
@@ -386,14 +410,12 @@
             }, 300);
         }
 
-        // 脫靶時的畫布閃動提示
         function drawFlashBorder() {
-            ctx.strokeStyle = "rgba(231, 76, 60, 0.5)";
-            ctx.lineWidth = 10;
+            ctx.strokeStyle = "rgba(255, 71, 87, 0.4)";
+            ctx.lineWidth = 8;
             ctx.strokeRect(0, 0, canvas.width, canvas.height);
         }
 
-        // 更新介面文字
         function updateUI() {
             const req = levelSettings[level] ? levelSettings[level].requiredHits : 0;
             document.getElementById("lblLevel").innerText = level;
@@ -404,31 +426,27 @@
             document.getElementById("lblAccuracy").innerText = accuracy;
         }
 
-        // 結束遊戲
         function endGame(isWin, isTimeOut = false) {
             isPlaying = false;
             clearTimeout(targetTimeout);
             clearInterval(timerInterval);
             
             document.getElementById("btnStart").disabled = false;
-            document.getElementById("btnStart").style.backgroundColor = "#e74c3c";
+            document.getElementById("btnStart").style.backgroundColor = "#00ffcc";
+            document.getElementById("btnStart").style.color = "#0d0d12";
 
             const accuracy = totalClicks === 0 ? 100 : Math.round((successfulHits / totalClicks) * 100);
             
-            let title = "訓練結束";
-            if (isWin) {
-                title = "⚡ 恭喜完成全五關特訓！";
-            } else if (isTimeOut) {
-                title = "⏰ 時間到！訓練終止";
-            }
+            let title = "模擬結束";
+            if (isWin) title = "⚡ 戰術特訓全通關！";
+            else if (isTimeOut) title = "⏰ 時間截止！";
             
             const timeUsed = (120 - parseFloat(timeLeft)).toFixed(2);
-            let desc = `最終得分：${score} 分\n總計通關：第 ${level} 關\n總共耗時：${timeUsed} 秒\n整體精準度：${accuracy}%`;
+            let desc = `最終得分：${score} 分\n通關進度：第 ${level} 關\n總計耗時：${timeUsed} 秒\n射擊精準度：${accuracy}%`;
             
             document.getElementById("modal-title").innerText = title;
-            
             if (checkHighScore(score)) {
-                desc += "\n\n恭喜你擠進神射手排行榜！請輸入名字：";
+                desc += "\n\n成功登入神射手榜！請輸入代號：";
                 document.getElementById("name-input-area").style.display = "block";
             } else {
                 document.getElementById("name-input-area").style.display = "none";
@@ -437,15 +455,14 @@
             document.getElementById("modal-desc").innerText = desc;
             document.getElementById("modal-overlay").style.display = "flex";
             
-            // 結束後重置大廳靶心
-            target = { x: 250, y: 250, radius: 35 };
+            target = { x: 250, y: 220, radius: 35, z: 1.0 };
             drawCanvas(); 
         }
 
         function closeModal() {
             const nameInput = document.getElementById("playerName");
             if (document.getElementById("name-input-area").style.display === "block") {
-                const name = nameInput.value.trim() || "未知小兵";
+                const name = nameInput.value.trim() || "Ranger";
                 saveHighScore(name, score);
                 nameInput.value = "";
             }
@@ -453,9 +470,8 @@
             showLeaderboard();
         }
 
-        // --- 排行榜 LocalStorage 邏輯 ---
         function getLeaderboard() {
-            const board = localStorage.getItem("aim_leaderboard");
+            const board = localStorage.getItem("aim_leaderboard_3d");
             return board ? JSON.parse(board) : [];
         }
 
@@ -471,27 +487,24 @@
             board.push({name: name, score: currentScore, date: new Date().toLocaleDateString()});
             board.sort((a, b) => b.score - a.score);
             board = board.slice(0, 5);
-            localStorage.setItem("aim_leaderboard", JSON.stringify(board));
+            localStorage.setItem("aim_leaderboard_3d", JSON.stringify(board));
         }
 
         function showLeaderboard() {
             const board = getLeaderboard();
             const listEl = document.getElementById("leaderList");
             listEl.innerHTML = "";
-            
             if (board.length === 0) {
                 listEl.innerHTML = "<li>暫無資料</li>";
                 return;
             }
-
             board.forEach(item => {
                 const li = document.createElement("li");
-                li.innerHTML = `<strong>${item.name}</strong> - ${item.score} 分 (${item.date})`;
+                li.innerHTML = `<strong>${item.name}</strong> - ${item.score} 點 (${item.date})`;
                 listEl.appendChild(li);
             });
         }
 
-        // 初始繪製背景與載入排行榜
         drawCanvas();
         showLeaderboard();
     </script>
